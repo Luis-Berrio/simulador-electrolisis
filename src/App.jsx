@@ -4,7 +4,6 @@ import Scene3D from "./components/Scene3D";
 import ControlPanel from "./components/ControlPanel";
 import Topbar from "./components/Topbar";
 import Logbar from "./components/Logbar";
-import Chart from "./components/Chart";
 import EnergyPanel from "./components/EnergyPanel";
 import { calcular } from "./physics/faraday";
 
@@ -81,7 +80,6 @@ function App() {
         hasData={history.length > 0}
       />
       <Scene3D params={params} results={results} running={running}>
-        <Chart results={results} running={running} />
       </Scene3D>
       <div
         style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}
