@@ -25,6 +25,7 @@ function App() {
     params.resistance,
     params.time,
     params.electrolyte,
+  params.electrode   
   );
 
   // Timer

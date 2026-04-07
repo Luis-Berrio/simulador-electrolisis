@@ -174,6 +174,65 @@ export default function ControlPanel({ params, setParams, results }) {
             </button>
           ))}
         </div>
+        {/* Eficiencia del electrodo seleccionado */}
+        <div
+          style={{
+            marginTop: 8,
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            borderRadius: 7,
+            padding: "8px 11px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span style={{ fontSize: 11, color: "var(--muted2)" }}>
+            Eficiencia del electrodo
+          </span>
+          <span
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              fontFamily: "var(--font-mono)",
+              color:
+                results.electrodeEff >= 90
+                  ? "#4ade80"
+                  : results.electrodeEff >= 75
+                    ? "#fbbf24"
+                    : "#ef4444",
+            }}
+          >
+            {results.electrodeEff}%
+          </span>
+        </div>
+
+        {/* Barra visual de eficiencia */}
+        <div
+          style={{
+            height: 4,
+            borderRadius: 2,
+            background: "var(--surface2)",
+            overflow: "hidden",
+            marginTop: 6,
+          }}
+        >
+          <div
+            style={{
+              height: "100%",
+              width: `${results.electrodeEff}%`,
+              borderRadius: 2,
+              background:
+                results.electrodeEff >= 90
+                  ? "#4ade80"
+                  : results.electrodeEff >= 75
+                    ? "#fbbf24"
+                    : "#ef4444",
+              transition: "width .4s ease, background .3s ease",
+              boxShadow: `0 0 6px ${results.electrodeEff >= 90 ? "#4ade80" : results.electrodeEff >= 75 ? "#fbbf24" : "#ef4444"}60`,
+            }}
+          />
+        </div>
       </Section>
 
       {/* ── Fórmulas ── */}
