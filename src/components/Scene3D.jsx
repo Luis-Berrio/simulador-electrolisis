@@ -1,16 +1,25 @@
+import { useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Environment, Stars, Text } from "@react-three/drei";
+import { OrbitControls, Environment, Stars } from "@react-three/drei";
 import Tank from "./Tank";
 import Electrodes from "./Electrodes";
 import Bubbles from "./Bubbles";
 import PowerSupply from "./PowerSupply";
 import Cables from "./Cables";
-import LabEnvironment from "./LabEnvironment";
-import MultimeterScreen from "./MultimeterScreen";
-import DynamicLighting from "./DynamicLighting";
 import Steam from "./Steam";
+import DynamicLighting from "./DynamicLighting";
+import MultimeterScreen from "./MultimeterScreen";
+import LabEnvironment from "./LabEnvironment";
+import HomeSimulation from "./HomeSimulation";
+import HomeCameraController from "./HomeCameraController";
+import { calcularConsumo, calcularPilaCombustible } from "../physics/hydrogen";
 
 export default function Scene3D({ params, results }) {
+  const [homeMode, setHomeMode] = useState(false);
+
+  const fuelCell = calcularPilaCombustible(results.massH2 / 1000);
+  const consumption = calcularConsumo(fuelCell.energyElecKWh);
+
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
       {/* Badge H2 */}
@@ -76,7 +85,7 @@ export default function Scene3D({ params, results }) {
         </div>
       </div>
 
-      {/* Badge corriente */}
+      {/* Badges métricas inferiores */}
       <div
         style={{
           position: "absolute",
@@ -134,6 +143,62 @@ export default function Scene3D({ params, results }) {
         ))}
       </div>
 
+      {/* Botón home mode */}
+      <button
+        onClick={() => setHomeMode((m) => !m)}
+        style={{
+          position: "absolute",
+          top: 16,
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 20,
+          background: homeMode ? "rgba(129,140,248,.2)" : "rgba(13,16,23,.85)",
+          border: `1px solid ${homeMode ? "#818cf8" : "rgba(255,255,255,.1)"}`,
+          borderRadius: 20,
+          padding: "6px 18px",
+          color: homeMode ? "#818cf8" : "#9ca3af",
+          fontSize: 12,
+          fontWeight: 600,
+          cursor: "pointer",
+          fontFamily: "var(--font-main)",
+          backdropFilter: "blur(8px)",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          transition: "all .3s",
+        }}
+      >
+        <span>{homeMode ? "🔬" : "🏠"}</span>
+        {homeMode ? "Ver laboratorio" : "Ver simulación de hogar"}
+      </button>
+
+      {/* Ayuda de controles cuando está en home mode */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 16,
+          right: 16,
+          zIndex: 15,
+          background: "rgba(13,16,23,.9)",
+          border: "1px solid rgba(255,255,255,.1)",
+          borderRadius: 8,
+          padding: "10px 14px",
+          fontSize: 11,
+          color: "#9ca3af",
+          fontFamily: "monospace",
+          backdropFilter: "blur(8px)",
+          lineHeight: 1.8,
+        }}
+      >
+        <div style={{ color: "#818cf8", fontWeight: 700, marginBottom: 4 }}>
+          🎮 CONTROLES
+        </div>
+        <div>⬆⬇⬅➡ / WASD — Mover cámara</div>
+        <div>Q / E — Bajar / Subir</div>
+        <div>🖱️ Clic izq + arrastrar — Rotar</div>
+        <div>🖱️ Rueda — Zoom</div>
+      </div>
+
       {/* Canvas 3D */}
       <Canvas
         shadows="soft"
@@ -142,7 +207,6 @@ export default function Scene3D({ params, results }) {
           antialias: true,
           powerPreference: "high-performance",
           stencil: false,
-          depth: true,
         }}
         performance={{ min: 0.5 }}
         style={{
@@ -150,6 +214,8 @@ export default function Scene3D({ params, results }) {
             "radial-gradient(ellipse at 30% 40%, #0f1e3d 0%, #07090f 70%)",
         }}
       >
+        <HomeCameraController homeMode={homeMode} />
+
         <ambientLight intensity={0.25} />
         <directionalLight
           position={[8, 10, 6]}
@@ -158,14 +224,6 @@ export default function Scene3D({ params, results }) {
           shadow-mapSize={[1024, 1024]}
         />
         <DynamicLighting voltage={params.voltage} current={results.current} />
-
-        {/* Agrega junto a los otros componentes: */}
-        {/* <Steam current={results.current} /> */}
-        <MultimeterScreen
-          voltage={params.voltage}
-          current={results.current}
-          resistance={params.resistance}
-        />
 
         <Stars
           radius={80}
@@ -176,27 +234,47 @@ export default function Scene3D({ params, results }) {
           speed={0.3}
         />
 
-        <PowerSupply voltage={params.voltage} current={results.current} />
-        <Tank />
-        <Electrodes />
-        <Cables />
-        <LabEnvironment />
-        <Bubbles current={results.current} />
+        {/* Laboratorio */}
+        {!homeMode && (
+          <>
+            <PowerSupply voltage={params.voltage} current={results.current} />
+            <Tank />
+            <Electrodes />
+            <Bubbles current={results.current} />
+            <Cables />
+            <Steam current={results.current} />
+            <MultimeterScreen
+              voltage={params.voltage}
+              current={results.current}
+              resistance={params.resistance}
+            />
+            <LabEnvironment />
+          </>
+        )}
+
+        {/* Simulación de hogar */}
+        <HomeSimulation
+          visible={homeMode}
+          applianceData={consumption.appliances}
+          energyKWh={fuelCell.energyElecKWh}
+        />
 
         <OrbitControls
-          enablePan={false}
-          minDistance={4}
-          maxDistance={18}
-          maxPolarAngle={Math.PI / 1.7}
-          // autoRotate
-          // autoRotateSpeed={0.4}
+          enablePan={true}
+          enableZoom={true}
+          enableRotate={true}
+          minDistance={1}
+          maxDistance={40}
+          maxPolarAngle={Math.PI / 1.3}
           autoRotate={false}
+          makeDefault
         />
-        <Environment preset="warehouse" />
+        <Environment preset={homeMode ? "apartment" : "warehouse"} />
       </Canvas>
     </div>
   );
 }
+
 function badge(color, pos) {
   const rgb = color === "#3b82f6" ? "59,130,246" : "239,68,68";
   const side = pos === "left" ? { left: 16 } : { right: 16 };

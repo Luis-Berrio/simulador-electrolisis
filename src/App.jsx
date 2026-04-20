@@ -5,7 +5,12 @@ import ControlPanel from "./components/ControlPanel";
 import Topbar from "./components/Topbar";
 import Logbar from "./components/Logbar";
 import EnergyPanel from "./components/EnergyPanel";
+import SystemTabs from "./components/SystemTabs";
+import StoragePanel from "./components/StoragePanel";
+import FuelCellPanel from "./components/FuelCellPanel";
+import ConsumptionPanel from "./components/ConsumptionPanel";
 import { calcular } from "./physics/faraday";
+import { calcularPilaCombustible } from "./physics/hydrogen";
 
 function App() {
   const [params, setParams] = useState({
@@ -19,16 +24,19 @@ function App() {
   const [seconds, setSeconds] = useState(0);
   const [running, setRunning] = useState(true);
   const [history, setHistory] = useState([]);
+  const [activeTab, setActiveTab] = useState("electrolysis");
+  const [waterSource, setWaterSource] = useState("rain");
 
   const results = calcular(
     params.voltage,
     params.resistance,
     params.time,
     params.electrolyte,
-  params.electrode   
+    params.electrode,
   );
 
-  // Timer
+  const fuelCell = calcularPilaCombustible(results.massH2 / 1000);
+
   useEffect(() => {
     if (!running) return;
     const interval = setInterval(() => {
@@ -80,14 +88,60 @@ function App() {
         onExport={handleExportCSV}
         hasData={history.length > 0}
       />
-      <Scene3D params={params} results={results} running={running}>
-      </Scene3D>
-      <div
-        style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}
-      >
-        <EnergyPanel results={results} params={params} />
-        <ControlPanel params={params} setParams={setParams} results={results} />
-      </div>
+
+      {/* Pestañas del sistema */}
+      <SystemTabs activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {/* Contenido según pestaña activa */}
+      {activeTab === "electrolysis" && (
+        <>
+          <Scene3D params={params} results={results} running={running} />
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
+            <EnergyPanel results={results} params={params} />
+            <ControlPanel
+              params={params}
+              setParams={setParams}
+              results={results}
+            />
+          </div>
+        </>
+      )}
+
+      {activeTab === "storage" && (
+        <div style={{ gridColumn: "1 / -1", overflow: "hidden" }}>
+          <StoragePanel
+            massH2Grams={results.massH2}
+            waterSource={waterSource}
+            onWaterSourceChange={setWaterSource}
+          />
+        </div>
+      )}
+
+      {activeTab === "fuelcell" && (
+        <div style={{ gridColumn: "1 / -1", overflow: "hidden" }}>
+          <FuelCellPanel massH2Grams={results.massH2} />
+        </div>
+      )}
+
+      {activeTab === "consumption" && (
+        <div
+          style={{
+            gridColumn: "1 / -1",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <ConsumptionPanel energyElecKWh={fuelCell.energyElecKWh} />
+        </div>
+      )}
+
       <Logbar
         params={params}
         results={results}

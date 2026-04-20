@@ -41,7 +41,7 @@ body {
 .app-layout {
   display: grid;
   grid-template-columns: 1fr 340px;
-  grid-template-rows: 52px 1fr 44px;
+  grid-template-rows: 52px 40px 1fr 44px;
   height: 100vh;
   width: 100vw;
 }
