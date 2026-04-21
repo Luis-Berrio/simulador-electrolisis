@@ -13,6 +13,7 @@ import LabEnvironment from "./LabEnvironment";
 import HomeSimulation from "./HomeSimulation";
 import HomeCameraController from "./HomeCameraController";
 import { calcularConsumo, calcularPilaCombustible } from "../physics/hydrogen";
+import RenewableSources3D from "./RenewableSources3D";
 
 export default function Scene3D({ params, results }) {
   const [homeMode, setHomeMode] = useState(false);
@@ -270,6 +271,7 @@ export default function Scene3D({ params, results }) {
           makeDefault
         />
         <Environment preset={homeMode ? "apartment" : "warehouse"} />
+        {!homeMode && <RenewableSources3D sourceId={params.energySource} />}
       </Canvas>
     </div>
   );

@@ -11,6 +11,7 @@ import FuelCellPanel from "./components/FuelCellPanel";
 import ConsumptionPanel from "./components/ConsumptionPanel";
 import { calcular } from "./physics/faraday";
 import { calcularPilaCombustible } from "./physics/hydrogen";
+import TransportPanel from "./components/TransportPanel";
 
 function App() {
   const [params, setParams] = useState({
@@ -20,6 +21,7 @@ function App() {
     electrolyte: 1.0,
     ph: 14,
     electrode: "Platino (Pt)",
+    energySource: "solar",
   });
   const [seconds, setSeconds] = useState(0);
   const [running, setRunning] = useState(true);
@@ -139,6 +141,12 @@ function App() {
           }}
         >
           <ConsumptionPanel energyElecKWh={fuelCell.energyElecKWh} />
+        </div>
+      )}
+
+      {activeTab === "transport" && (
+        <div style={{ gridColumn: "1 / -1", overflow: "hidden" }}>
+          <TransportPanel massH2Grams={results.massH2} />
         </div>
       )}
 

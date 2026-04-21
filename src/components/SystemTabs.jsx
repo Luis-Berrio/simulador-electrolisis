@@ -5,6 +5,7 @@ const TABS = [
   { id: "storage", label: "🔵 Almacenamiento H₂", step: 2 },
   { id: "fuelcell", label: "⚙️ Pila de combustible", step: 3 },
   { id: "consumption", label: "🏠 Consumo energético", step: 4 },
+  { id: 'transport',    label: '🚗 Transporte H₂', step: 5 },
 ];
 
 export default function SystemTabs({ activeTab, onTabChange }) {

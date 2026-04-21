@@ -6,7 +6,7 @@ import * as THREE from "three";
 // ══════════════════════════════════════════════
 //  DIMENSIONES HABITACIÓN
 // ══════════════════════════════════════════════
-const ROOM = { width: 20, depth: 14, height: 7, floorY: -2.2 };
+const ROOM = { width: 20, depth: 14, height: 5.5, floorY: -2.2 };
 const WALLS = {
   back: -ROOM.depth / 2,
   front: ROOM.depth / 2,
@@ -226,15 +226,12 @@ function EnergyCable({ hasEnergy, energyLevel }) {
 
   const points = useMemo(
     () => [
-      new THREE.Vector3(3.5, 3.5, 2.5),
-      new THREE.Vector3(5, ROOM.height - 0.15, 1.5),
-      new THREE.Vector3(WALLS.right - 0.15, ROOM.height - 0.15, -2),
-      new THREE.Vector3(
-        WALLS.right - 0.15,
-        ROOM.height - 0.15,
-        WALLS.back + 1.5,
-      ),
-      new THREE.Vector3(WALLS.right - 0.15, -1.4, WALLS.back + 1.5),
+      new THREE.Vector3(3.0, 3.2, 3.0),
+      new THREE.Vector3(WALLS.right - 0.1, 3.8, 3.0),
+      new THREE.Vector3(WALLS.right - 0.1, ROOM.height - 0.3, 3.0),
+      new THREE.Vector3(WALLS.right - 0.1, ROOM.height - 0.3, WALLS.back + 2),
+      new THREE.Vector3(WALLS.right - 0.1, 0, WALLS.back + 1.5),
+      new THREE.Vector3(WALLS.right - 0.1, -1.4, WALLS.back + 1.5),
     ],
     [],
   );
@@ -407,17 +404,46 @@ function Room() {
 
       <WindowWithView position={[WALLS.left + 0.06, 1, -2]} />
       <Door position={[WALLS.left + 0.06, -0.8, 3]} />
+      {/* Cuadros pared fondo */}
       <WallFrame
-        position={[-5, 1.2, WALLS.back + 0.06]}
+        position={[-6.5, 1.5, WALLS.back + 0.06]}
         size={[1.4, 1.0]}
         color="#1e40af"
       />
       <WallFrame
-        position={[-3, 1.2, WALLS.back + 0.06]}
-        size={[1.0, 1.0]}
+        position={[-4.5, 1.2, WALLS.back + 0.06]}
+        size={[1.0, 1.4]}
         color="#166534"
       />
-      <WallClock position={[3, 2, WALLS.back + 0.06]} />
+      <WallFrame
+        position={[1, 2.2, WALLS.back + 0.06]}
+        size={[1.8, 0.8]}
+        color="#7c2d12"
+      />
+
+      {/* Reloj */}
+      <WallClock position={[3, 2.5, WALLS.back + 0.06]} />
+
+      {/* Estante flotante pared fondo */}
+      <FloatingShelf position={[-3, 0.3, WALLS.back + 0.06]} />
+
+      {/* Cuadros pared derecha */}
+      <WallFrame
+        position={[WALLS.right - 0.06, 1.5, 0]}
+        size={[1.2, 0.9]}
+        color="#581c87"
+        rotationY={-Math.PI / 2}
+      />
+      <WallFrame
+        position={[WALLS.right - 0.06, 1.5, 2]}
+        size={[1.0, 1.0]}
+        color="#a16207"
+        rotationY={-Math.PI / 2}
+      />
+
+      {/* Planta decorativa en esquina */}
+      <Plant position={[WALLS.left + 1.5, ROOM.floorY, 5]} />
+      <Plant position={[-8, ROOM.floorY, WALLS.back + 0.5]} />
 
       <mesh
         position={[-2, ROOM.floorY + 0.005, -2]}
@@ -438,6 +464,67 @@ function Room() {
           opacity={0.6}
         />
       </mesh>
+    </group>
+  );
+}
+function FloatingShelf({ position }) {
+  return (
+    <group position={position}>
+      {/* Repisa */}
+      <mesh>
+        <boxGeometry args={[1.5, 0.05, 0.3]} />
+        <meshStandardMaterial color="#2a1810" roughness={0.7} />
+      </mesh>
+      {/* Libros */}
+      {[-0.5, -0.35, -0.2].map((x, i) => (
+        <mesh key={i} position={[x, 0.15, 0]}>
+          <boxGeometry args={[0.08, 0.25, 0.2]} />
+          <meshStandardMaterial
+            color={["#1e40af", "#166534", "#7f1d1d"][i]}
+            roughness={0.7}
+          />
+        </mesh>
+      ))}
+      {/* Florero */}
+      <mesh position={[0.3, 0.15, 0]}>
+        <cylinderGeometry args={[0.06, 0.08, 0.25, 12]} />
+        <meshStandardMaterial color="#d4af37" roughness={0.3} metalness={0.6} />
+      </mesh>
+      {/* Portarretrato */}
+      <mesh position={[0.6, 0.12, 0]}>
+        <boxGeometry args={[0.18, 0.2, 0.03]} />
+        <meshStandardMaterial color="#1f2937" roughness={0.5} />
+      </mesh>
+    </group>
+  );
+}
+
+function Plant({ position }) {
+  return (
+    <group position={[position[0], position[1], position[2]]}>
+      {/* Maceta */}
+      <mesh position={[0, 0.25, 0]}>
+        <cylinderGeometry args={[0.22, 0.18, 0.5, 16]} />
+        <meshStandardMaterial color="#1e1308" roughness={0.8} />
+      </mesh>
+      {/* Tallo */}
+      <mesh position={[0, 0.8, 0]}>
+        <cylinderGeometry args={[0.03, 0.04, 0.8, 8]} />
+        <meshStandardMaterial color="#166534" roughness={0.9} />
+      </mesh>
+      {/* Hojas — esferas apiladas */}
+      {[
+        [0, 1.3, 0, 0.35],
+        [0.2, 1.5, 0.1, 0.28],
+        [-0.2, 1.5, -0.1, 0.28],
+        [0, 1.7, 0.2, 0.25],
+        [0.15, 1.75, -0.15, 0.22],
+      ].map((p, i) => (
+        <mesh key={i} position={[p[0], p[1], p[2]]}>
+          <sphereGeometry args={[p[3], 12, 12]} />
+          <meshStandardMaterial color="#15803d" roughness={0.9} />
+        </mesh>
+      ))}
     </group>
   );
 }
@@ -523,9 +610,9 @@ function Door({ position }) {
   );
 }
 
-function WallFrame({ position, size, color }) {
+function WallFrame({ position, size, color, rotationY = 0 }) {
   return (
-    <group position={position}>
+    <group position={position} rotation={[0, rotationY, 0]}>
       <mesh>
         <boxGeometry args={[size[0] + 0.08, size[1] + 0.08, 0.04]} />
         <meshStandardMaterial color="#1a1108" roughness={0.7} />
@@ -1019,17 +1106,16 @@ function Television({ position, isOn, appData, onHover, onLeave, hovered }) {
   });
   return (
     <group position={position}>
-      {/* TV mira hacia +Z (no se rota) */}
       <mesh castShadow onPointerOver={onHover} onPointerOut={onLeave}>
         <boxGeometry args={[1.8, 1.1, 0.08]} />
         <meshStandardMaterial color="#080d14" roughness={0.2} metalness={0.9} />
       </mesh>
       <mesh position={[0, 0.05, 0.042]}>
-        <boxGeometry args={[1.7, 0.95, 0.01]} />
+        <boxGeometry args={[1.68, 0.94, 0.01]} />
         <meshStandardMaterial color="#040810" roughness={0.5} />
       </mesh>
       <mesh position={[0, 0.05, 0.048]}>
-        <planeGeometry args={[1.64, 0.88]} />
+        <planeGeometry args={[1.55, 0.82]} />
         <meshStandardMaterial
           ref={screenRef}
           color={isOn ? "#0f1e38" : "#050a10"}
@@ -1389,7 +1475,7 @@ function WashingMachine({
   return (
     <group position={position} onPointerOver={onHover} onPointerOut={onLeave}>
       <mesh castShadow>
-        <boxGeometry args={[0.85, 1.1, 0.75]} />
+        <boxGeometry args={[1.1, 1.6, 0.95]} />
         <meshStandardMaterial
           color="#e5e7eb"
           roughness={0.25}
@@ -1397,12 +1483,12 @@ function WashingMachine({
         />
       </mesh>
       {/* Puerta circular */}
-      <mesh position={[0, 0.05, 0.378]} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[0.3, 0.05, 12, 24]} />
+      <mesh position={[0, 0.1, 0.48]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.38, 0.06, 12, 24]} />
         <meshStandardMaterial color="#1f2937" metalness={0.9} roughness={0.2} />
       </mesh>
-      <mesh position={[0, 0.05, 0.38]}>
-        <circleGeometry args={[0.28, 24]} />
+      <mesh position={[0, 0.1, 0.485]}>
+        <circleGeometry args={[0.35, 24]} />
         <meshPhysicalMaterial
           color={isOn ? "#60a5fa" : "#0d1117"}
           emissive={isOn ? "#3b82f6" : "#000"}
@@ -1418,13 +1504,13 @@ function WashingMachine({
         <meshStandardMaterial color="#4b5563" transparent opacity={0.3} />
       </mesh>
       {/* Panel superior */}
-      <mesh position={[0, 0.52, 0.3]}>
-        <boxGeometry args={[0.7, 0.04, 0.15]} />
+      <mesh position={[0, 0.78, 0.4]}>
+        <boxGeometry args={[1.0, 0.06, 0.2]} />
         <meshStandardMaterial color="#111827" roughness={0.4} />
       </mesh>
       {/* Perillas */}
-      {[-0.2, 0, 0.2].map((x, i) => (
-        <mesh key={i} position={[x, 0.54, 0.3]} rotation={[Math.PI / 2, 0, 0]}>
+      {[-0.3, 0, 0.3].map((x, i) => (
+        <mesh key={i} position={[x, 0.82, 0.4]} rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[0.03, 0.03, 0.02, 12]} />
           <meshStandardMaterial
             color="#374151"
@@ -1452,7 +1538,7 @@ function MiniSplit({ position, isOn, appData, onHover, onLeave, hovered }) {
   return (
     <group position={position} onPointerOver={onHover} onPointerOut={onLeave}>
       <mesh castShadow>
-        <boxGeometry args={[1.4, 0.35, 0.25]} />
+        <boxGeometry args={[2.2, 0.55, 0.4]} />
         <meshStandardMaterial color="#f3f4f6" roughness={0.3} metalness={0.3} />
       </mesh>
       {/* Rejilla */}
@@ -1598,7 +1684,7 @@ export default function HomeSimulation({ visible, applianceData, energyKWh }) {
 
       {/* ── LAVANDERÍA — pegada a pared derecha, más al frente ── */}
       <WashingMachine
-        position={[WALLS.right - 0.5, ROOM.floorY + 0.55, WALLS.back + 4.5]}
+        position={[WALLS.right - 0.7, ROOM.floorY + 0.8, WALLS.back + 4.5]}
         isOn={isOn("washing")}
         appData={getApp("washing")}
         onHover={hover("washing")}
@@ -1608,7 +1694,7 @@ export default function HomeSimulation({ visible, applianceData, energyKWh }) {
 
       {/* Aire acondicionado pared fondo */}
       <MiniSplit
-        position={[5, 3.5, WALLS.back + 0.2]}
+        position={[3, 2.8, WALLS.back + 0.25]}
         isOn={isOn("mini_ac")}
         appData={getApp("mini_ac")}
         onHover={hover("mini_ac")}

@@ -1,4 +1,5 @@
 import { calcular } from "../physics/faraday";
+import EnergySelector from "./EnergySelector";
 export default function ControlPanel({ params, setParams, results }) {
   const update = (key, val) => setParams((p) => ({ ...p, [key]: val }));
 
@@ -90,6 +91,13 @@ export default function ControlPanel({ params, setParams, results }) {
           />
         </div>
       </Section>
+
+      <EnergySelector
+        selectedSource={params.energySource}
+        onChange={(id) => update("energySource", id)}
+        massH2Grams={results.massH2}
+        energyKWh={results.energy / 3600000}
+      />
 
       {/* ── Sliders ── */}
       <Section title="Control de variables">
