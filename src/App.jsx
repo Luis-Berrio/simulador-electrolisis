@@ -22,6 +22,8 @@ function App() {
     ph: 14,
     electrode: "Platino (Pt)",
     energySource: "solar",
+    systemQuality: "basic",
+    vehicle: "car",
   });
   const [seconds, setSeconds] = useState(0);
   const [running, setRunning] = useState(true);
@@ -35,6 +37,7 @@ function App() {
     params.time,
     params.electrolyte,
     params.electrode,
+    params.systemQuality,
   );
 
   const fuelCell = calcularPilaCombustible(results.massH2 / 1000);
@@ -146,7 +149,11 @@ function App() {
 
       {activeTab === "transport" && (
         <div style={{ gridColumn: "1 / -1", overflow: "hidden" }}>
-          <TransportPanel massH2Grams={results.massH2} />
+          <TransportPanel
+            massH2Grams={results.massH2}
+            vehicleId={params.vehicle}
+            onVehicleChange={(id) => setParams((p) => ({ ...p, vehicle: id }))}
+          />
         </div>
       )}
 

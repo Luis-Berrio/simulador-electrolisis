@@ -1,18 +1,36 @@
 const F_CONST = 96485;
 const M_H2 = 2.016;
 const M_O2 = 32.0;
+const V_MIN = 1.23;
 
-// Factor de eficiencia real por material de electrodo
-// Platino es el más eficiente (100%), los demás tienen pérdidas
-const ELECTRODE_EFFICIENCY = {
-  "Platino (Pt)": 1.0, // 100% — electrodo ideal, sin reacciones secundarias
-  "Grafito (C)": 0.78, // 78%  — económico pero se degrada, menor eficiencia
-  "Níquel (Ni)": 0.89, // 89%  — buena eficiencia, usado en electrólisis industrial
-  "Acero (Fe)": 0.65, // 65%  — se oxida, baja eficiencia, no recomendado
+// Calidad del sistema — afecta la eficiencia del proceso completo
+export const SYSTEM_QUALITY = {
+  basic: {
+    id: "basic",
+    label: "Sistema básico (actual)",
+    efficiencyMultiplier: 1.0, // sin mejora
+    description: "Laboratorio estándar 20-30% eficiencia",
+  },
+  commercial: {
+    id: "commercial",
+    label: "Sistema comercial",
+    efficiencyMultiplier: 2.5,
+    description: "Electrolizador alcalino industrial 60-70%",
+  },
+  advanced: {
+    id: "advanced",
+    label: "Sistema avanzado PEM",
+    efficiencyMultiplier: 3.5,
+    description: "Membrana PEM de última generación 80-85%",
+  },
 };
 
-// Voltaje mínimo teórico para electrólisis
-const V_MIN = 1.23;
+const ELECTRODE_EFFICIENCY = {
+  "Platino (Pt)": 1.0,
+  "Grafito (C)": 0.78,
+  "Níquel (Ni)": 0.89,
+  "Acero (Fe)": 0.65,
+};
 
 export function calcular(
   voltage,
@@ -20,36 +38,38 @@ export function calcular(
   time,
   conductivity,
   electrode = "Platino (Pt)",
+  systemQuality = "basic",
 ) {
-  const efficiency = ELECTRODE_EFFICIENCY[electrode] ?? 1.0;
+  const electrodeEff = ELECTRODE_EFFICIENCY[electrode] ?? 1.0;
+  const system = SYSTEM_QUALITY[systemQuality] || SYSTEM_QUALITY.basic;
 
-  // Corriente según Ohm, afectada por conductividad del electrolito
+  // Eficiencia combinada — electrodo × calidad del sistema
+  const totalEff = electrodeEff * system.efficiencyMultiplier;
+
   const current = (voltage / resistance) * conductivity;
+  const power = voltage * current;
+  const charge = current * time;
+  const energy = power * time;
 
-  // Corriente efectiva — el material del electrodo reduce la corriente útil
-  const effectiveCurrent = current * efficiency;
+  // Masa afectada por la eficiencia total del sistema
+  const massH2 = (M_H2 * charge * totalEff) / (2 * F_CONST);
+  const massO2 = (M_O2 * charge * totalEff) / (4 * F_CONST);
 
-  const power = voltage * current; // potencia total consumida
-  const charge = effectiveCurrent * time; // carga útil (Coulombs)
-  const energy = power * time; // energía total (J)
-
-  // Masa producida según Faraday con corriente efectiva
-  const massH2 = (M_H2 * charge) / (2 * F_CONST);
-  const massO2 = (M_O2 * charge) / (4 * F_CONST);
-
-  // Eficiencia energética respecto al mínimo teórico
+  // Eficiencia energética aparente
   const energyEfficiency =
-    voltage > 0 ? Math.min(100, (V_MIN / voltage) * 100 * efficiency) : 0;
+    voltage > 0 ? Math.min(100, (V_MIN / voltage) * 100 * totalEff) : 0;
 
   return {
     current: parseFloat(current.toFixed(3)),
-    effectiveCurrent: parseFloat(effectiveCurrent.toFixed(3)),
+    effectiveCurrent: parseFloat(current.toFixed(3)),
     power: parseFloat(power.toFixed(2)),
     charge: parseFloat(charge.toFixed(2)),
     energy: parseFloat(energy.toFixed(2)),
     massH2: parseFloat(massH2.toFixed(6)),
     massO2: parseFloat(massO2.toFixed(6)),
     efficiency: parseFloat(energyEfficiency.toFixed(1)),
-    electrodeEff: parseFloat((efficiency * 100).toFixed(0)),
+    electrodeEff: parseFloat((electrodeEff * 100).toFixed(0)),
+    systemEff: parseFloat((Math.min(1, totalEff) * 100).toFixed(0)),
+    systemLabel: system.label,
   };
 }

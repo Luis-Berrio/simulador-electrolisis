@@ -1,5 +1,7 @@
 import { calcular } from "../physics/faraday";
 import EnergySelector from "./EnergySelector";
+import { SYSTEM_QUALITY } from "../physics/faraday";
+
 export default function ControlPanel({ params, setParams, results }) {
   const update = (key, val) => setParams((p) => ({ ...p, [key]: val }));
 
@@ -148,6 +150,67 @@ export default function ControlPanel({ params, setParams, results }) {
             </option>
           ))}
         </select>
+      </Section>
+
+      {/* ── Calidad del sistema ── */}
+      <Section title="Calidad del sistema electrolizador">
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {Object.values(SYSTEM_QUALITY).map((sq) => {
+            const active = params.systemQuality === sq.id;
+            const effPercent = Math.round(sq.efficiencyMultiplier * 24);
+            return (
+              <button
+                key={sq.id}
+                onClick={() => update("systemQuality", sq.id)}
+                style={{
+                  background: active
+                    ? "rgba(74,222,128,.08)"
+                    : "var(--surface)",
+                  border: `1px solid ${active ? "#4ade80" : "var(--border2)"}`,
+                  borderRadius: 7,
+                  padding: "8px 10px",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  transition: "all .2s",
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: active ? "#4ade80" : "var(--text)",
+                    }}
+                  >
+                    {sq.label}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: "var(--muted)",
+                      marginTop: 2,
+                    }}
+                  >
+                    {sq.description}
+                  </div>
+                </div>
+                <div
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: active ? "#4ade80" : "var(--muted2)",
+                    fontFamily: "var(--font-mono)",
+                  }}
+                >
+                  ≈{Math.min(85, effPercent)}%
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </Section>
 
       {/* ── Electrodos ── */}

@@ -1,18 +1,17 @@
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Environment } from "@react-three/drei";
 import { useState } from "react";
-import HydrogenCar3D from "./HydrogenCar3D";
-import {
-  calcularTransporte,
-  DESTINATIONS,
-  CAR_TYPES,
-  TANK_CAPACITY_KG,
-  MAX_RANGE_KM,
-} from "../physics/transport";
+import HydrogenVehicle3D from "./HydrogenVehicle3D";
+import { calcularTransporte, VEHICLES, CAR_TYPES } from "../physics/transport";
 
-export default function TransportPanel({ massH2Grams }) {
+export default function TransportPanel({
+  massH2Grams,
+  vehicleId,
+  onVehicleChange,
+}) {
   const [activeView, setActiveView] = useState("destinations");
-  const data = calcularTransporte(massH2Grams);
+  const data = calcularTransporte(massH2Grams, vehicleId);
+  const v = data.vehicle;
 
   return (
     <div
@@ -23,7 +22,7 @@ export default function TransportPanel({ massH2Grams }) {
         overflow: "hidden",
       }}
     >
-      {/* ══ VISTA 3D DEL CARRO ══ */}
+      {/* ── VISTA 3D ── */}
       <div
         style={{
           position: "relative",
@@ -36,26 +35,70 @@ export default function TransportPanel({ massH2Grams }) {
           camera={{ position: [5, 3, 7], fov: 45 }}
           gl={{ antialias: true, powerPreference: "high-performance" }}
         >
-          <HydrogenCar3D tankFillPercent={data.tankFillPercent} />
+          <HydrogenVehicle3D vehicleId={vehicleId} />
           <OrbitControls
             enablePan={false}
-            minDistance={4}
-            maxDistance={12}
+            minDistance={3}
+            maxDistance={14}
             maxPolarAngle={Math.PI / 2.1}
             target={[0, 0.5, 0]}
           />
           <Environment preset="city" />
         </Canvas>
 
-        {/* Badge autonomía — flotante izquierda */}
+        {/* Selector de vehículo flotante */}
         <div
           style={{
             position: "absolute",
             top: 20,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 10,
+            display: "flex",
+            gap: 6,
+            background: "rgba(10,15,25,.92)",
+            border: "1px solid rgba(255,255,255,.1)",
+            borderRadius: 12,
+            padding: 6,
+            backdropFilter: "blur(10px)",
+          }}
+        >
+          {VEHICLES.map((vh) => (
+            <button
+              key={vh.id}
+              onClick={() => onVehicleChange(vh.id)}
+              style={{
+                background:
+                  vehicleId === vh.id ? `${vh.color}20` : "transparent",
+                border: `1px solid ${vehicleId === vh.id ? vh.color : "transparent"}`,
+                borderRadius: 8,
+                padding: "6px 14px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                color: vehicleId === vh.id ? vh.color : "#9ca3af",
+                fontSize: 12,
+                fontWeight: vehicleId === vh.id ? 700 : 400,
+                fontFamily: "var(--font-main)",
+                transition: "all .2s",
+              }}
+            >
+              <span style={{ fontSize: 16 }}>{vh.icon}</span>
+              {vh.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Badge autonomía */}
+        <div
+          style={{
+            position: "absolute",
+            top: 90,
             left: 20,
             zIndex: 10,
             background: "rgba(10,15,25,.92)",
-            border: "1px solid rgba(59,130,246,.3)",
+            border: `1px solid ${v.color}40`,
             borderRadius: 10,
             padding: "12px 16px",
             backdropFilter: "blur(10px)",
@@ -69,7 +112,7 @@ export default function TransportPanel({ massH2Grams }) {
             style={{
               fontSize: 28,
               fontWeight: 700,
-              color: "#3b82f6",
+              color: v.color,
               fontFamily: "var(--font-mono)",
             }}
           >
@@ -81,11 +124,11 @@ export default function TransportPanel({ massH2Grams }) {
           </div>
         </div>
 
-        {/* Badge tanque — flotante derecha */}
+        {/* Badge tanque */}
         <div
           style={{
             position: "absolute",
-            top: 20,
+            top: 90,
             right: 20,
             zIndex: 10,
             background: "rgba(10,15,25,.92)",
@@ -94,7 +137,7 @@ export default function TransportPanel({ massH2Grams }) {
             padding: "12px 16px",
             backdropFilter: "blur(10px)",
             pointerEvents: "none",
-            minWidth: 200,
+            minWidth: 220,
           }}
         >
           <div
@@ -106,7 +149,7 @@ export default function TransportPanel({ massH2Grams }) {
               marginBottom: 6,
             }}
           >
-            <span>TANQUE H₂</span>
+            <span>TANQUE H₂ ({v.tank_kg} kg)</span>
             <span
               style={{
                 color: "#4ade80",
@@ -140,12 +183,20 @@ export default function TransportPanel({ massH2Grams }) {
               }}
             />
           </div>
-          <div style={{ fontSize: 10, color: "#4b5563", marginTop: 4 }}>
-            {data.massH2Kg.toFixed(4)} / {TANK_CAPACITY_KG} kg
+          <div
+            style={{
+              fontSize: 10,
+              color: "#4b5563",
+              marginTop: 4,
+              fontFamily: "var(--font-mono)",
+            }}
+          >
+            {data.massH2Kg.toFixed(4)} / {v.tank_kg} kg · Faltan{" "}
+            {data.h2NeededKg.toFixed(3)} kg
           </div>
         </div>
 
-        {/* Info inferior — modelo de carro */}
+        {/* Info inferior */}
         <div
           style={{
             position: "absolute",
@@ -165,8 +216,8 @@ export default function TransportPanel({ massH2Grams }) {
           }}
         >
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: "#3b82f6" }}>
-              💧 {MAX_RANGE_KM.toFixed(0)} km
+            <div style={{ fontSize: 18, fontWeight: 700, color: v.color }}>
+              {v.icon} {v.max_range_km} km
             </div>
             <div style={{ fontSize: 9, color: "#6b7280", marginTop: 2 }}>
               Autonomía máx.
@@ -188,7 +239,7 @@ export default function TransportPanel({ massH2Grams }) {
           />
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 18, fontWeight: 700, color: "#fbbf24" }}>
-              ⏱ 4 min
+              ⏱ {v.refuel_minutes} min
             </div>
             <div style={{ fontSize: 9, color: "#6b7280", marginTop: 2 }}>
               Tiempo recarga
@@ -197,7 +248,7 @@ export default function TransportPanel({ massH2Grams }) {
         </div>
       </div>
 
-      {/* ══ PANEL DERECHO ══ */}
+      {/* ── PANEL DERECHO ── */}
       <div
         style={{
           background: "var(--bg2)",
@@ -207,7 +258,6 @@ export default function TransportPanel({ massH2Grams }) {
           flexDirection: "column",
         }}
       >
-        {/* Pestañas */}
         <div
           style={{ display: "flex", borderBottom: "1px solid var(--border)" }}
         >
@@ -234,34 +284,37 @@ export default function TransportPanel({ massH2Grams }) {
                 fontWeight: activeView === tab.id ? 700 : 400,
                 cursor: "pointer",
                 fontFamily: "var(--font-main)",
-                transition: "all .2s",
               }}
             >
               {tab.label}
             </button>
           ))}
         </div>
-
-        {/* Contenido */}
         <div style={{ flex: 1, overflowY: "auto", padding: 14 }}>
-          {activeView === "destinations" && <DestinationsList data={data} />}
+          {activeView === "destinations" && (
+            <DestinationsList data={data} vehicle={v} />
+          )}
           {activeView === "comparison" && (
             <ComparisonView rangeKm={data.rangeKm} />
           )}
-          {activeView === "impact" && <ImpactView data={data} />}
+          {activeView === "impact" && <ImpactView data={data} vehicle={v} />}
         </div>
       </div>
     </div>
   );
 }
 
-// ══════════════════════════════════════════════
-//  VISTA DESTINOS
-// ══════════════════════════════════════════════
-function DestinationsList({ data }) {
+function DestinationsList({ data, vehicle }) {
+  // Agrupar por tipo
+  const grouped = data.reachableDestinations.reduce((acc, d) => {
+    if (!acc[d.type]) acc[d.type] = [];
+    acc[d.type].push(d);
+    return acc;
+  }, {});
+
   return (
     <div>
-      <SectionTitle>¿A dónde puedes llegar?</SectionTitle>
+      <SectionTitle>Destinos desde Valledupar</SectionTitle>
       <div
         style={{
           fontSize: 11,
@@ -271,114 +324,118 @@ function DestinationsList({ data }) {
         }}
       >
         Con{" "}
-        <span style={{ color: "#3b82f6", fontWeight: 700 }}>
+        <span style={{ color: vehicle.color, fontWeight: 700 }}>
           {data.rangeKm.toFixed(1)} km
         </span>{" "}
-        de autonomía disponible puedes completar estos viajes:
+        en tu {vehicle.name.toLowerCase()}:
       </div>
 
-      {data.reachableDestinations.map((d) => (
-        <div
-          key={d.id}
-          style={{
-            background: "var(--surface)",
-            border: `1px solid ${d.canReach ? "rgba(74,222,128,.2)" : "rgba(239,68,68,.15)"}`,
-            borderRadius: 8,
-            padding: "10px 12px",
-            marginBottom: 6,
-            opacity: d.canReach ? 1 : 0.65,
-          }}
-        >
+      {Object.entries(grouped).map(([type, dests]) => (
+        <div key={type} style={{ marginBottom: 14 }}>
           <div
             style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
+              fontSize: 10,
+              color: "var(--muted)",
+              textTransform: "uppercase",
+              letterSpacing: ".08em",
               marginBottom: 6,
+              fontWeight: 600,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 16 }}>{d.icon}</span>
-              <div>
+            {type}
+          </div>
+          {dests.map((d) => (
+            <div
+              key={d.id}
+              style={{
+                background: "var(--surface)",
+                border: `1px solid ${d.canReach ? "rgba(74,222,128,.2)" : "rgba(239,68,68,.15)"}`,
+                borderRadius: 8,
+                padding: "9px 12px",
+                marginBottom: 5,
+                opacity: d.canReach ? 1 : 0.65,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 5,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 14 }}>{d.icon}</span>
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: "var(--text)",
+                      }}
+                    >
+                      {d.name}
+                    </div>
+                    <div style={{ fontSize: 9, color: "var(--muted)" }}>
+                      {d.km} km
+                    </div>
+                  </div>
+                </div>
+                {d.canReach ? (
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "#4ade80",
+                      fontFamily: "var(--font-mono)",
+                    }}
+                  >
+                    ×{d.trips} {d.trips === 1 ? "viaje" : "viajes"}
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: "#ef4444",
+                      fontFamily: "var(--font-mono)",
+                    }}
+                  >
+                    {d.partialTrip.toFixed(0)}% del viaje
+                  </div>
+                )}
+              </div>
+              <div
+                style={{
+                  height: 3,
+                  borderRadius: 2,
+                  background: "rgba(255,255,255,.04)",
+                  overflow: "hidden",
+                }}
+              >
                 <div
                   style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: "var(--text)",
+                    height: "100%",
+                    width: `${Math.min(100, d.partialTrip)}%`,
+                    background: d.canReach ? "#4ade80" : "#ef4444",
                   }}
-                >
-                  {d.name}
-                </div>
-                <div style={{ fontSize: 10, color: "var(--muted)" }}>
-                  {d.type} · {d.km} km
-                </div>
+                />
               </div>
             </div>
-            {d.canReach ? (
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: "#4ade80",
-                  fontFamily: "var(--font-mono)",
-                }}
-              >
-                ×{d.trips} {d.trips === 1 ? "viaje" : "viajes"}
-              </div>
-            ) : (
-              <div
-                style={{
-                  fontSize: 10,
-                  color: "#ef4444",
-                  fontFamily: "var(--font-mono)",
-                }}
-              >
-                {d.partialTrip.toFixed(0)}% del viaje
-              </div>
-            )}
-          </div>
-          <div
-            style={{
-              height: 4,
-              borderRadius: 2,
-              background: "rgba(255,255,255,.04)",
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                height: "100%",
-                width: `${Math.min(100, d.partialTrip)}%`,
-                background: d.canReach ? "#4ade80" : "#ef4444",
-                boxShadow: `0 0 4px currentColor`,
-              }}
-            />
-          </div>
+          ))}
         </div>
       ))}
     </div>
   );
 }
 
-// ══════════════════════════════════════════════
-//  VISTA COMPARACIÓN
-// ══════════════════════════════════════════════
 function ComparisonView({ rangeKm }) {
   return (
     <div>
       <SectionTitle>Comparativa de vehículos</SectionTitle>
-      <div
-        style={{
-          fontSize: 11,
-          color: "var(--muted)",
-          marginBottom: 12,
-          lineHeight: 1.5,
-        }}
-      >
-        Costo, emisiones y características para recorrer{" "}
+      <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 12 }}>
+        Costo, emisiones y características para{" "}
         <b style={{ color: "#3b82f6" }}>100 km</b>:
       </div>
-
       {CAR_TYPES.map((c) => (
         <div
           key={c.id}
@@ -422,7 +479,6 @@ function ComparisonView({ rangeKm }) {
               </span>
             )}
           </div>
-
           <div
             style={{
               display: "grid",
@@ -494,14 +550,10 @@ function ComparisonView({ rangeKm }) {
   );
 }
 
-// ══════════════════════════════════════════════
-//  VISTA IMPACTO AMBIENTAL
-// ══════════════════════════════════════════════
-function ImpactView({ data }) {
+function ImpactView({ data, vehicle }) {
   return (
     <div>
-      <SectionTitle>Impacto ambiental y ahorro</SectionTitle>
-
+      <SectionTitle>Impacto ambiental</SectionTitle>
       <div
         style={{
           background: "rgba(74,222,128,.08)",
@@ -535,46 +587,6 @@ function ImpactView({ data }) {
           CO₂ evitados en {data.rangeKm.toFixed(1)} km
         </div>
       </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 8,
-          marginBottom: 12,
-        }}
-      >
-        <ImpactMetric
-          icon="💰"
-          color="#fbbf24"
-          label="Ahorro COP"
-          value={`$${data.costSavedCOP.toLocaleString("es-CO")}`}
-          sub="vs gasolina"
-        />
-        <ImpactMetric
-          icon="💵"
-          color="#22d3ee"
-          label="Ahorro USD"
-          value={`$${data.costSavedUSD.toFixed(2)}`}
-          sub="vs gasolina"
-        />
-        <ImpactMetric
-          icon="🌳"
-          color="#4ade80"
-          label="Árboles"
-          value={(data.co2AvoidedKg / 21).toFixed(2)}
-          sub="equivalentes/año"
-        />
-        <ImpactMetric
-          icon="⏰"
-          color="#818cf8"
-          label="Producción"
-          value={`${data.domesticHours.toFixed(1)}h`}
-          sub="electrólisis casera"
-        />
-      </div>
-
-      {/* Tabla resumen */}
       <div
         style={{
           background: "var(--surface)",
@@ -591,16 +603,24 @@ function ImpactView({ data }) {
             marginBottom: 10,
           }}
         >
-          RESUMEN DE VIAJE
+          RESUMEN DE VIAJE — {vehicle.name.toUpperCase()}
         </div>
         {[
-          ["Hidrógeno producido", `${(data.massH2Kg * 1000).toFixed(2)} g`],
+          ["Hidrógeno producido", `${data.massH2Grams.toFixed(2)} g`],
+          ["Hidrógeno en tanque", `${data.tankFillPercent.toFixed(1)}%`],
+          ["H₂ faltante", `${data.h2NeededKg.toFixed(3)} kg`],
+          ["Horas producción", `${data.domesticHoursToFill.toFixed(1)} h`],
           ["Autonomía obtenida", `${data.rangeKm.toFixed(1)} km`],
-          ["% tanque lleno", `${data.tankFillPercent.toFixed(1)}%`],
-          ["Costo operativo", `$${(data.rangeKm * 95).toFixed(0)} COP`],
-          ["Emisiones CO₂", "0 kg"],
+          [
+            "Costo operativo",
+            `$${(data.rangeKm * vehicle.cost_per_km_COP).toFixed(0)} COP`,
+          ],
+          [
+            "Ahorro vs gasolina",
+            `$${data.costSavedCOP.toLocaleString("es-CO")} COP`,
+          ],
           ["Subproducto", "💧 Agua pura"],
-        ].map(([k, v], i) => (
+        ].map(([k, v], i, arr) => (
           <div
             key={i}
             style={{
@@ -608,7 +628,8 @@ function ImpactView({ data }) {
               justifyContent: "space-between",
               fontSize: 11,
               padding: "6px 0",
-              borderBottom: i < 5 ? "1px solid rgba(255,255,255,.04)" : "none",
+              borderBottom:
+                i < arr.length - 1 ? "1px solid rgba(255,255,255,.04)" : "none",
             }}
           >
             <span style={{ color: "var(--muted2)" }}>{k}</span>
@@ -623,47 +644,6 @@ function ImpactView({ data }) {
             </span>
           </div>
         ))}
-      </div>
-    </div>
-  );
-}
-
-function ImpactMetric({ icon, color, label, value, sub }) {
-  return (
-    <div
-      style={{
-        background: "var(--surface)",
-        border: `1px solid ${color}20`,
-        borderRadius: 8,
-        padding: "10px",
-      }}
-    >
-      <div
-        style={{
-          fontSize: 10,
-          color: "var(--muted)",
-          marginBottom: 4,
-          display: "flex",
-          alignItems: "center",
-          gap: 4,
-        }}
-      >
-        <span style={{ fontSize: 12 }}>{icon}</span>
-        <span>{label}</span>
-      </div>
-      <div
-        style={{
-          fontSize: 15,
-          fontWeight: 700,
-          color,
-          fontFamily: "var(--font-mono)",
-          lineHeight: 1,
-        }}
-      >
-        {value}
-      </div>
-      <div style={{ fontSize: 9, color: "var(--muted)", marginTop: 3 }}>
-        {sub}
       </div>
     </div>
   );
