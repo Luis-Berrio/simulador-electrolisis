@@ -26,7 +26,7 @@ function VehicleModel({ vehicleId }) {
 
   // Escalas distintas según el vehículo
   const scale =
-    vehicleId === "car" ? 2 : vehicleId === "motorcycle" ? 1.5 : 1.2;
+    vehicleId === "car" ? 1.2 : vehicleId === "motorcycle" ? 1.8 : 1;
 
   if (!scene) return <FallbackVehicle vehicleId={vehicleId} />;
 

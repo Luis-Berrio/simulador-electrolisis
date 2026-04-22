@@ -120,7 +120,7 @@ export default function TransportPanel({
             <span style={{ fontSize: 16, color: "#6b7280" }}>km</span>
           </div>
           <div style={{ fontSize: 10, color: "#4b5563", marginTop: 4 }}>
-            con {data.massH2Kg.toFixed(4)} kg H₂
+            con {data.massH2Kg.toFixed(4)} g H₂
           </div>
         </div>
 
@@ -137,7 +137,7 @@ export default function TransportPanel({
             padding: "12px 16px",
             backdropFilter: "blur(10px)",
             pointerEvents: "none",
-            minWidth: 220,
+            minWidth: 240,
           }}
         >
           <div
@@ -152,12 +152,14 @@ export default function TransportPanel({
             <span>TANQUE H₂ ({v.tank_kg} kg)</span>
             <span
               style={{
-                color: "#4ade80",
+                color: data.tankFillPercent >= 1 ? "#4ade80" : "#ef4444",
                 fontWeight: 700,
                 fontFamily: "var(--font-mono)",
               }}
             >
-              {data.tankFillPercent.toFixed(1)}%
+              {data.tankFillPercent < 1
+                ? data.tankFillPercent.toFixed(3) + "%"
+                : data.tankFillPercent.toFixed(1) + "%"}
             </span>
           </div>
           <div
@@ -171,11 +173,11 @@ export default function TransportPanel({
             <div
               style={{
                 height: "100%",
-                width: `${Math.max(1, data.tankFillPercent)}%`,
+                width: `${Math.max(0.5, data.tankFillPercent)}%`,
                 background:
-                  data.tankFillPercent >= 80
+                  data.tankFillPercent >= 50
                     ? "#4ade80"
-                    : data.tankFillPercent >= 40
+                    : data.tankFillPercent >= 10
                       ? "#fbbf24"
                       : "#ef4444",
                 transition: "width .6s ease",
@@ -187,12 +189,19 @@ export default function TransportPanel({
             style={{
               fontSize: 10,
               color: "#4b5563",
-              marginTop: 4,
+              marginTop: 6,
               fontFamily: "var(--font-mono)",
+              lineHeight: 1.6,
             }}
           >
-            {data.massH2Kg.toFixed(4)} / {v.tank_kg} kg · Faltan{" "}
-            {data.h2NeededKg.toFixed(3)} kg
+            <div>
+              {data.massH2Grams.toFixed(3)} g / {(v.tank_kg * 1000).toFixed(0)}{" "}
+              g
+            </div>
+            <div>
+              Faltan {data.h2NeededGrams.toFixed(1)} g · ≈
+              {data.daysToFillTank.toFixed(0)} días con solar
+            </div>
           </div>
         </div>
 
@@ -512,7 +521,7 @@ function ComparisonView({ rangeKm }) {
                   fontFamily: "var(--font-mono)",
                 }}
               >
-                {(c.co2_per_km * 100).toFixed(1)} kg
+                {(c.co2_per_km * 100).toFixed(1)} g
               </div>
             </div>
             <div>
@@ -606,19 +615,26 @@ function ImpactView({ data, vehicle }) {
           RESUMEN DE VIAJE — {vehicle.name.toUpperCase()}
         </div>
         {[
-          ["Hidrógeno producido", `${data.massH2Grams.toFixed(2)} g`],
-          ["Hidrógeno en tanque", `${data.tankFillPercent.toFixed(1)}%`],
-          ["H₂ faltante", `${data.h2NeededKg.toFixed(3)} kg`],
-          ["Horas producción", `${data.domesticHoursToFill.toFixed(1)} h`],
-          ["Autonomía obtenida", `${data.rangeKm.toFixed(1)} km`],
+          ["Hidrógeno producido", `${data.massH2Grams.toFixed(3)} g`],
+          [
+            "Tanque lleno",
+            `${data.tankFillPercent < 1 ? data.tankFillPercent.toFixed(3) : data.tankFillPercent.toFixed(1)}%`,
+          ],
+          ["H₂ faltante", `${data.h2NeededGrams?.toFixed(1) ?? "0.0"} g`],
+          [
+            "Días para tanque lleno",
+            `${data.daysToFillTank?.toFixed(0) ?? "0"} días (solar)`,
+          ],
+          ["Autonomía obtenida", `${data.rangeKm.toFixed(2)} km`],
           [
             "Costo operativo",
-            `$${(data.rangeKm * vehicle.cost_per_km_COP).toFixed(0)} COP`,
+            `$${(data.rangeKm * (vehicle?.cost_per_km_COP ?? 95)).toFixed(0)} COP`,
           ],
           [
             "Ahorro vs gasolina",
-            `$${data.costSavedCOP.toLocaleString("es-CO")} COP`,
+            `$${(data.costSavedCOP ?? 0).toLocaleString?.("es-CO") ?? 0} COP`,
           ],
+          ["CO₂ evitado", `${data.co2AvoidedKg?.toFixed(4) ?? "0"} kg`],
           ["Subproducto", "💧 Agua pura"],
         ].map(([k, v], i, arr) => (
           <div

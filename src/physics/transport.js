@@ -27,25 +27,13 @@ export const VEHICLES = [
     icon: "🚗",
     color: "#3b82f6",
     model: "Sedán tipo Toyota Mirai",
-    h2_per_100km_kg: 0.89,
     tank_kg: 5.6,
+    h2_per_100km_kg: 0.89,
     max_range_km: 629,
     cost_per_km_COP: 95,
+    cost_per_km_USD: 0.023,
     refuel_minutes: 4,
     max_speed_kmh: 175,
-  },
-  {
-    id: "bike",
-    name: "Bicicleta H₂",
-    icon: "🚲",
-    color: "#4ade80",
-    model: "Pragma Alpha con pila H₂",
-    h2_per_100km_kg: 0.015, // ~70x menos que un carro
-    tank_kg: 0.12,
-    max_range_km: 800, // muy eficiente
-    cost_per_km_COP: 6,
-    refuel_minutes: 2,
-    max_speed_kmh: 35,
   },
   {
     id: "motorcycle",
@@ -53,12 +41,27 @@ export const VEHICLES = [
     icon: "🏍️",
     color: "#fb923c",
     model: "Suzuki Burgman Fuel Cell",
-    h2_per_100km_kg: 0.18, // intermedia
     tank_kg: 1.0,
+    h2_per_100km_kg: 0.18,
     max_range_km: 555,
     cost_per_km_COP: 32,
+    cost_per_km_USD: 0.008,
     refuel_minutes: 3,
     max_speed_kmh: 120,
+  },
+  {
+    id: "bike",
+    name: "Bicicleta H₂",
+    icon: "🚲",
+    color: "#4ade80",
+    model: "Pragma Alpha con pila H₂",
+    tank_kg: 0.12,
+    h2_per_100km_kg: 0.015,
+    max_range_km: 800,
+    cost_per_km_COP: 6,
+    cost_per_km_USD: 0.0015,
+    refuel_minutes: 2,
+    max_speed_kmh: 35,
   },
 ];
 
@@ -240,21 +243,21 @@ export function calcularTransporte(massH2Grams, vehicleId = "car") {
   const vehicle = VEHICLES.find((v) => v.id === vehicleId) || VEHICLES[0];
   const massH2Kg = massH2Grams / 1000;
 
-  // Autonomía con el H₂ disponible para ESE vehículo
+  // Kilómetros reales con el H₂ producido
   const rangeKm = (massH2Kg / vehicle.h2_per_100km_kg) * 100;
 
-  // Porcentaje del tanque lleno
+  // Porcentaje REAL del tanque
   const tankFillPercent = Math.min(100, (massH2Kg / vehicle.tank_kg) * 100);
 
-  // H₂ necesario para llenar el tanque
+  // Cuánto falta para llenar el tanque
   const h2NeededKg = Math.max(0, vehicle.tank_kg - massH2Kg);
-  const h2NeededG = h2NeededKg * 1000;
 
-  // Tiempo producción casera necesario (horas)
-  const DOMESTIC_H2_PER_HOUR_G = 2.0;
-  const domesticHoursToFill = h2NeededG / DOMESTIC_H2_PER_HOUR_G;
+  // Cuántas sesiones de 2 horas con sistema avanzado necesitarías
+  // (asumiendo ~5 g/h con sistema avanzado)
+  const ADVANCED_H2_PER_HOUR_G = 5.0;
+  const hoursToFillTank = (h2NeededKg * 1000) / ADVANCED_H2_PER_HOUR_G;
+  const daysToFillTank = hoursToFillTank / 8; // 8 horas de sol al día
 
-  // Destinos que puede alcanzar
   const reachableDestinations = DESTINATIONS.map((d) => {
     const trips = Math.floor(rangeKm / d.km);
     const canReach = rangeKm >= d.km;
@@ -262,24 +265,27 @@ export function calcularTransporte(massH2Grams, vehicleId = "car") {
     return { ...d, trips, canReach, partialTrip };
   });
 
-  // Ahorro vs gasolina
   const gasoline = CAR_TYPES.find((c) => c.id === "gasoline");
   const costSavedCOP =
     rangeKm * (gasoline.cost_per_km_COP - vehicle.cost_per_km_COP);
+  const costSavedUSD =
+    rangeKm * (gasoline.cost_per_km_USD - vehicle.cost_per_km_USD);
   const co2AvoidedKg = rangeKm * gasoline.co2_per_km;
 
   return {
     vehicle,
-    massH2Kg: parseFloat(massH2Kg.toFixed(5)),
-    massH2Grams: parseFloat(massH2Grams.toFixed(2)),
+    massH2Kg: parseFloat(massH2Kg.toFixed(6)),
+    massH2Grams: parseFloat(massH2Grams.toFixed(3)),
     rangeKm: parseFloat(rangeKm.toFixed(2)),
-    tankFillPercent: parseFloat(tankFillPercent.toFixed(2)),
-    h2NeededKg: parseFloat(h2NeededKg.toFixed(5)),
-    h2NeededG: parseFloat(h2NeededG.toFixed(2)),
-    domesticHoursToFill: parseFloat(domesticHoursToFill.toFixed(1)),
+    tankFillPercent: parseFloat(tankFillPercent.toFixed(4)),
+    h2NeededKg: parseFloat(h2NeededKg.toFixed(4)),
+    h2NeededGrams: parseFloat((h2NeededKg * 1000).toFixed(2)),
+    hoursToFillTank: parseFloat(hoursToFillTank.toFixed(1)),
+    daysToFillTank: parseFloat(daysToFillTank.toFixed(1)),
     reachableDestinations,
     costSavedCOP: parseFloat(costSavedCOP.toFixed(0)),
-    co2AvoidedKg: parseFloat(co2AvoidedKg.toFixed(3)),
+    costSavedUSD: parseFloat(costSavedUSD.toFixed(3)),
+    co2AvoidedKg: parseFloat(co2AvoidedKg.toFixed(4)),
     maxRangeKm: vehicle.max_range_km,
   };
 }
