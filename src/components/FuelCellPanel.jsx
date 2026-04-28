@@ -1,6 +1,186 @@
-import { useRef } from "react";
+import { useState, useRef } from "react";
 import { calcularPilaCombustible } from "../physics/hydrogen";
 
+// ── Tooltip inline ──────────────────────────────────────
+function Tip({ text }) {
+  const [v, setV] = useState(false);
+  const ref = useRef(null);
+  const [above, setAbove] = useState(false);
+
+  const handleShow = () => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      // Si hay menos de 160px arriba, muestra hacia abajo
+      setAbove(rect.top > 160);
+    }
+    setV(true);
+  };
+
+  return (
+    <span
+      ref={ref}
+      style={{
+        position: "relative",
+        display: "inline-flex",
+        alignItems: "center",
+        marginLeft: 5,
+      }}
+    >
+      <button
+        onMouseEnter={handleShow}
+        onMouseLeave={() => setV(false)}
+        onClick={() => (v ? setV(false) : handleShow())}
+        style={{
+          width: 15,
+          height: 15,
+          borderRadius: "50%",
+          background: "rgba(255,255,255,.08)",
+          border: "1px solid rgba(255,255,255,.15)",
+          color: "#9ca3af",
+          fontSize: 9,
+          fontWeight: 700,
+          cursor: "pointer",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: "var(--font-main)",
+          lineHeight: 1,
+          flexShrink: 0,
+          transition: "all .2s",
+        }}
+      >
+        ?
+      </button>
+      {v && (
+        <div
+          style={{
+            position: "absolute",
+            ...(above
+              ? { bottom: "130%", top: "auto" }
+              : { top: "130%", bottom: "auto" }),
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "#0d1117",
+            border: "1px solid rgba(59,130,246,.3)",
+            borderRadius: 8,
+            padding: "8px 10px",
+            width: 220,
+            zIndex: 9999,
+            boxShadow: "0 8px 24px rgba(0,0,0,.6)",
+            pointerEvents: "none",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              color: "#cbd5e1",
+              lineHeight: 1.6,
+              fontFamily: "var(--font-main)",
+            }}
+          >
+            {text}
+          </div>
+          {/* Triángulo arriba o abajo según dirección */}
+          <div
+            style={{
+              position: "absolute",
+              ...(above
+                ? {
+                    top: "100%",
+                    borderTop: "5px solid rgba(59,130,246,.3)",
+                    borderBottom: "none",
+                  }
+                : {
+                    bottom: "100%",
+                    borderBottom: "5px solid rgba(59,130,246,.3)",
+                    borderTop: "none",
+                  }),
+              left: "50%",
+              transform: "translateX(-50%)",
+              width: 0,
+              height: 0,
+              borderLeft: "5px solid transparent",
+              borderRight: "5px solid transparent",
+            }}
+          />
+        </div>
+      )}
+    </span>
+  );
+}
+
+// ── Componentes visuales ────────────────────────────────
+function FlowBox({ color, label, sub, tip }) {
+  return (
+    <div
+      style={{
+        width: "100%",
+        padding: "10px 14px",
+        background: `${color}12`,
+        border: `1px solid ${color}40`,
+        borderRadius: 8,
+        textAlign: "center",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 700,
+          color,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 4,
+        }}
+      >
+        {label}
+        {tip && <Tip text={tip} />}
+      </div>
+      <div
+        style={{
+          fontSize: 10,
+          color: "#9ca3af",
+          marginTop: 2,
+          fontFamily: "var(--font-mono)",
+        }}
+      >
+        {sub}
+      </div>
+    </div>
+  );
+}
+
+function FlowArrow() {
+  return (
+    <div
+      style={{ fontSize: 16, color: "#374151", lineHeight: 1, margin: "2px 0" }}
+    >
+      ↓
+    </div>
+  );
+}
+
+function SectionTitle({ children }) {
+  return (
+    <div
+      style={{
+        fontSize: 10,
+        fontWeight: 600,
+        letterSpacing: ".1em",
+        textTransform: "uppercase",
+        color: "#6b7280",
+        display: "flex",
+        alignItems: "center",
+        gap: 7,
+      }}
+    >
+      {children}
+      <span style={{ flex: 1, height: 1, background: "var(--border)" }} />
+    </div>
+  );
+}
+
+// ── Panel principal ─────────────────────────────────────
 export default function FuelCellPanel({ massH2Grams }) {
   const massKg = massH2Grams / 1000;
   const data = calcularPilaCombustible(massKg);
@@ -8,39 +188,45 @@ export default function FuelCellPanel({ massH2Grams }) {
   const stages = [
     {
       label: "Entrada H₂",
+      icon: "🔵",
       value: `${(massKg * 1000).toFixed(4)} g`,
       color: "#3b82f6",
-      icon: "🔵",
+      tip: "El hidrógeno producido en la electrólisis llega aquí almacenado. Es el combustible de la pila — cuanto más H₂ haya, más electricidad se puede generar.",
     },
     {
       label: "Energía química",
+      icon: "⚗️",
       value: `${data.energyChemMJ.toFixed(4)} MJ`,
       color: "#fbbf24",
-      icon: "⚗️",
+      tip: "Es la energía que contiene el hidrógeno almacenado. Se calcula con el Poder Calorífico Inferior del H₂ (119.96 MJ/kg). Esta energía todavía no es electricidad — es potencial químico.",
     },
     {
       label: "Eficiencia PEM",
+      icon: "⚙️",
       value: `${data.efficiency}%`,
       color: "#22d3ee",
-      icon: "⚙️",
+      tip: "La pila PEM convierte el 60% de la energía química del H₂ en electricidad. El 40% restante se disipa como calor. Los motores de gasolina solo aprovechan el 20-25%.",
     },
     {
       label: "Energía eléctrica",
+      icon: "⚡",
       value: `${data.energyElecKWh.toFixed(5)} kWh`,
       color: "#4ade80",
-      icon: "⚡",
+      tip: "Es la electricidad real que sale de la pila después de aplicar la eficiencia del 60%. Esta es la energía disponible para alimentar electrodomésticos o cargar vehículos.",
     },
     {
       label: "Voltaje stack",
+      icon: "🔋",
       value: `${data.stackVoltage.toFixed(1)} V DC`,
       color: "#818cf8",
-      icon: "🔋",
+      tip: "El voltaje que entrega la pila en corriente continua (DC). Cada celda PEM genera ~0.7V. Varias celdas en serie forman el 'stack' y suman el voltaje total.",
     },
     {
       label: "Corriente stack",
+      icon: "〰️",
       value: `${data.stackCurrent.toFixed(2)} A`,
       color: "#f472b6",
-      icon: "〰️",
+      tip: "La corriente eléctrica que fluye por el circuito de la pila. Junto con el voltaje determina la potencia entregada (P = V × I).",
     },
   ];
 
@@ -55,7 +241,7 @@ export default function FuelCellPanel({ massH2Grams }) {
         overflowY: "auto",
       }}
     >
-      {/* ── Diagrama de flujo de la pila ── */}
+      {/* ── Diagrama de flujo ── */}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <SectionTitle>Diagrama de la pila PEM</SectionTitle>
 
@@ -67,7 +253,6 @@ export default function FuelCellPanel({ massH2Grams }) {
             padding: 20,
           }}
         >
-          {/* Representación visual de la pila */}
           <div
             style={{
               display: "flex",
@@ -76,11 +261,11 @@ export default function FuelCellPanel({ massH2Grams }) {
               alignItems: "center",
             }}
           >
-            {/* Entrada H2 */}
             <FlowBox
               color="#3b82f6"
               label="H₂ almacenado"
               sub={`${(massKg * 1000).toFixed(4)} g`}
+              tip="El hidrógeno llega desde el tanque de almacenamiento. Es el combustible que va a reaccionar con el oxígeno del aire para generar electricidad."
             />
             <FlowArrow />
 
@@ -96,8 +281,19 @@ export default function FuelCellPanel({ massH2Grams }) {
                 textAlign: "center",
               }}
             >
-              <div style={{ fontSize: 12, fontWeight: 700, color: "#818cf8" }}>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "#818cf8",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 4,
+                }}
+              >
                 ⚙️ Membrana PEM
+                <Tip text="La membrana PEM (Membrana de Intercambio Protónico) es una lámina delgada de polímero especial. Solo deja pasar los protones del hidrógeno (H⁺) y bloquea los electrones, que son forzados a viajar por el circuito externo generando corriente eléctrica." />
               </div>
               <div style={{ fontSize: 10, color: "#6b7280", marginTop: 4 }}>
                 2H₂ → 4H⁺ + 4e⁻ &nbsp;|&nbsp; O₂ + 4H⁺ + 4e⁻ → 2H₂O
@@ -111,19 +307,21 @@ export default function FuelCellPanel({ massH2Grams }) {
               >
                 <div style={{ fontSize: 10, color: "#3b82f6" }}>
                   ← Cátodo (H₂)
+                  <Tip text="En el cátodo el H₂ se divide en protones (H⁺) y electrones (e⁻). Los protones cruzan la membrana y los electrones generan la corriente eléctrica." />
                 </div>
                 <div style={{ fontSize: 10, color: "#ef4444" }}>
                   Ánodo (O₂) →
+                  <Tip text="En el ánodo el oxígeno del aire se combina con los protones que cruzaron la membrana y los electrones que vienen del circuito, produciendo agua pura como único residuo." />
                 </div>
               </div>
             </div>
             <FlowArrow />
 
-            {/* Salida eléctrica */}
             <FlowBox
               color="#4ade80"
               label="Electricidad DC"
               sub={`${data.energyElecKWh.toFixed(5)} kWh`}
+              tip="La electricidad sale en corriente continua (DC), como la de una batería. Antes de usarla en casa hay que convertirla a corriente alterna (AC) con el inversor."
             />
             <FlowArrow />
 
@@ -138,24 +336,34 @@ export default function FuelCellPanel({ massH2Grams }) {
                 textAlign: "center",
               }}
             >
-              <div style={{ fontSize: 12, fontWeight: 700, color: "#fbbf24" }}>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "#fbbf24",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 4,
+                }}
+              >
                 🔄 Inversor DC → AC
+                <Tip text="El inversor convierte la corriente continua (DC) de la pila en corriente alterna (AC) de 220V — el mismo tipo de electricidad que sale de los enchufes de tu casa. Tiene una eficiencia del 92%, lo que significa que pierde solo el 8% de energía en la conversión." />
               </div>
               <div style={{ fontSize: 10, color: "#6b7280", marginTop: 3 }}>
-                Eficiencia: 92% · {data.stackVoltage.toFixed(0)}V DC → 120/220V
-                AC
+                Eficiencia: 92% · {data.stackVoltage.toFixed(0)}V DC → 220V AC
               </div>
             </div>
             <FlowArrow />
 
-            {/* Salida AC */}
             <FlowBox
               color="#818cf8"
               label="Red AC disponible"
               sub="Lista para electrodomésticos"
+              tip="La electricidad ya está lista para usarse en cualquier aparato del hogar. A esta energía se le aplica la eficiencia del inversor (92%), por eso es un poco menos que la que salió directamente de la pila."
             />
 
-            {/* Subproducto agua */}
+            {/* Subproducto */}
             <div
               style={{
                 marginTop: 10,
@@ -168,8 +376,9 @@ export default function FuelCellPanel({ massH2Grams }) {
               }}
             >
               <span style={{ fontSize: 10, color: "#22d3ee" }}>
-                💧 Subproducto: agua pura (H₂O) — 100% limpio, cero emisiones
+                💧 Subproducto: agua pura (H₂O)
               </span>
+              <Tip text="La reacción química en la pila produce únicamente agua pura como residuo. No hay humo, no hay CO₂, no hay ruido. El agua producida es tan pura que en algunos sistemas se recicla para volver a hacer electrólisis." />
             </div>
           </div>
         </div>
@@ -192,8 +401,18 @@ export default function FuelCellPanel({ massH2Grams }) {
                 padding: "10px 11px",
               }}
             >
-              <div style={{ fontSize: 10, color: "#4b5563", marginBottom: 4 }}>
+              <div
+                style={{
+                  fontSize: 10,
+                  color: "#4b5563",
+                  marginBottom: 4,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
                 {s.icon} {s.label}
+                <Tip text={s.tip} />
               </div>
               <div
                 style={{
@@ -209,7 +428,7 @@ export default function FuelCellPanel({ massH2Grams }) {
           ))}
         </div>
 
-        {/* Barra de eficiencia */}
+        {/* Barra eficiencia */}
         <div
           style={{
             background: "var(--surface)",
@@ -225,9 +444,13 @@ export default function FuelCellPanel({ massH2Grams }) {
               marginBottom: 8,
               display: "flex",
               justifyContent: "space-between",
+              alignItems: "center",
             }}
           >
-            <span>Eficiencia pila PEM</span>
+            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              Eficiencia pila PEM
+              <Tip text="La eficiencia del 60% significa que de cada 100 unidades de energía química del H₂, 60 se convierten en electricidad útil. Los 40 restantes salen como calor. En sistemas de cogeneración ese calor también se aprovecha, subiendo la eficiencia total al 80-90%." />
+            </span>
             <span style={{ color: "#4ade80", fontWeight: 700 }}>60%</span>
           </div>
           <div
@@ -254,7 +477,7 @@ export default function FuelCellPanel({ massH2Grams }) {
           </div>
         </div>
 
-        {/* Comparativa energética */}
+        {/* Comparativa */}
         <div
           style={{
             background: "var(--surface)",
@@ -269,9 +492,13 @@ export default function FuelCellPanel({ massH2Grams }) {
               fontWeight: 600,
               color: "#9ca3af",
               marginBottom: 10,
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
             }}
           >
             Comparativa con fuentes convencionales
+            <Tip text="Esta comparativa muestra la eficiencia real de cada tecnología. Un motor de gasolina desperdicia el 75-80% de la energía del combustible en calor. La pila PEM aprovecha el doble de energía útil comparada con la gasolina." />
           </div>
           {[
             { label: "Motor a gasolina", eff: 25, color: "#ef4444" },
@@ -315,63 +542,6 @@ export default function FuelCellPanel({ massH2Grams }) {
           ))}
         </div>
       </div>
-    </div>
-  );
-}
-
-function FlowBox({ color, label, sub }) {
-  return (
-    <div
-      style={{
-        width: "100%",
-        padding: "10px 14px",
-        background: `${color}12`,
-        border: `1px solid ${color}40`,
-        borderRadius: 8,
-        textAlign: "center",
-      }}
-    >
-      <div style={{ fontSize: 12, fontWeight: 700, color }}>{label}</div>
-      <div
-        style={{
-          fontSize: 10,
-          color: "#9ca3af",
-          marginTop: 2,
-          fontFamily: "var(--font-mono)",
-        }}
-      >
-        {sub}
-      </div>
-    </div>
-  );
-}
-
-function FlowArrow() {
-  return (
-    <div
-      style={{ fontSize: 16, color: "#374151", lineHeight: 1, margin: "2px 0" }}
-    >
-      ↓
-    </div>
-  );
-}
-
-function SectionTitle({ children }) {
-  return (
-    <div
-      style={{
-        fontSize: 10,
-        fontWeight: 600,
-        letterSpacing: ".1em",
-        textTransform: "uppercase",
-        color: "#6b7280",
-        display: "flex",
-        alignItems: "center",
-        gap: 7,
-      }}
-    >
-      {children}
-      <span style={{ flex: 1, height: 1, background: "var(--border)" }} />
     </div>
   );
 }

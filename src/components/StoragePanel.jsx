@@ -1,4 +1,113 @@
+import { useState, useRef } from "react";
 import { calcularAlmacenamiento, WATER_SOURCES } from "../physics/hydrogen";
+
+// ── Tooltip inline ──────────────────────────
+function Tip({ text }) {
+  const [v, setV] = useState(false);
+  const ref = useRef(null);
+  const [above, setAbove] = useState(false);
+
+  const handleShow = () => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      // Si hay menos de 160px arriba, muestra hacia abajo
+      setAbove(rect.top > 160);
+    }
+    setV(true);
+  };
+
+  return (
+    <span
+      ref={ref}
+      style={{
+        position: "relative",
+        display: "inline-flex",
+        alignItems: "center",
+        marginLeft: 5,
+      }}
+    >
+      <button
+        onMouseEnter={handleShow}
+        onMouseLeave={() => setV(false)}
+        onClick={() => (v ? setV(false) : handleShow())}
+        style={{
+          width: 15,
+          height: 15,
+          borderRadius: "50%",
+          background: "rgba(255,255,255,.08)",
+          border: "1px solid rgba(255,255,255,.15)",
+          color: "#9ca3af",
+          fontSize: 9,
+          fontWeight: 700,
+          cursor: "pointer",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: "var(--font-main)",
+          lineHeight: 1,
+          flexShrink: 0,
+          transition: "all .2s",
+        }}
+      >
+        ?
+      </button>
+      {v && (
+        <div
+          style={{
+            position: "absolute",
+            ...(above
+              ? { bottom: "130%", top: "auto" }
+              : { top: "130%", bottom: "auto" }),
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "#0d1117",
+            border: "1px solid rgba(59,130,246,.3)",
+            borderRadius: 8,
+            padding: "8px 10px",
+            width: 220,
+            zIndex: 9999,
+            boxShadow: "0 8px 24px rgba(0,0,0,.6)",
+            pointerEvents: "none",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              color: "#cbd5e1",
+              lineHeight: 1.6,
+              fontFamily: "var(--font-main)",
+            }}
+          >
+            {text}
+          </div>
+          {/* Triángulo arriba o abajo según dirección */}
+          <div
+            style={{
+              position: "absolute",
+              ...(above
+                ? {
+                    top: "100%",
+                    borderTop: "5px solid rgba(59,130,246,.3)",
+                    borderBottom: "none",
+                  }
+                : {
+                    bottom: "100%",
+                    borderBottom: "5px solid rgba(59,130,246,.3)",
+                    borderTop: "none",
+                  }),
+              left: "50%",
+              transform: "translateX(-50%)",
+              width: 0,
+              height: 0,
+              borderLeft: "5px solid transparent",
+              borderRight: "5px solid transparent",
+            }}
+          />
+        </div>
+      )}
+    </span>
+  );
+}
 
 export default function StoragePanel({
   massH2Grams,
@@ -30,9 +139,11 @@ export default function StoragePanel({
     >
       {/* ── Tanque visual ── */}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <SectionTitle>Tanque de almacenamiento H₂</SectionTitle>
+        <SectionTitle>
+          Tanque de almacenamiento H₂
+          <Tip text="El hidrógeno producido en la electrólisis se comprime y almacena aquí. Funciona igual que un cilindro de gas propano — el gas se guarda a presión para ocupar menos espacio y poder usarse después." />
+        </SectionTitle>
 
-        {/* Tanque animado */}
         <div
           style={{
             background: "var(--surface)",
@@ -45,9 +156,8 @@ export default function StoragePanel({
             gap: 12,
           }}
         >
-          {/* Representación del tanque */}
+          {/* Tanque animado */}
           <div style={{ position: "relative", width: 120, height: 200 }}>
-            {/* Cuerpo del tanque */}
             <div
               style={{
                 width: 120,
@@ -60,7 +170,6 @@ export default function StoragePanel({
                 boxShadow: `0 0 20px ${fillColor}30`,
               }}
             >
-              {/* Líquido */}
               <div
                 style={{
                   position: "absolute",
@@ -89,7 +198,6 @@ export default function StoragePanel({
                   </span>
                 )}
               </div>
-              {/* Marcas del tanque */}
               {[25, 50, 75].map((m) => (
                 <div
                   key={m}
@@ -150,7 +258,10 @@ export default function StoragePanel({
         </div>
 
         {/* Fuente de agua */}
-        <SectionTitle>Fuente de agua</SectionTitle>
+        <SectionTitle>
+          Fuente de agua
+          <Tip text="La calidad del agua afecta la eficiencia de la electrólisis. El agua lluvia filtrada es gratuita y funciona bien. El agua destilada es la más pura pero tiene costo. A mayor pureza, menos contaminantes que puedan dañar los electrodos." />
+        </SectionTitle>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {WATER_SOURCES.map((ws) => (
             <button
@@ -225,24 +336,28 @@ export default function StoragePanel({
             value={data.volumenAtmL.toFixed(4)}
             unit="L"
             color="#3b82f6"
+            tip="Es el volumen que ocuparía el hidrógeno si estuviera a la presión normal del aire (1 atm). 1 gramo de H₂ ocupa unos 11 litros — mucho más que la gasolina, por eso se comprime para almacenarlo."
           />
           <MetricBox
             label="Volumen en tanque (350 bar)"
             value={data.volumenTankL.toFixed(5)}
             unit="L"
             color="#22d3ee"
+            tip="Es el volumen real que ocupa el H₂ comprimido a 350 veces la presión del aire. Los carros de hidrógeno como el Toyota Mirai usan esta presión para guardar suficiente H₂ en un espacio pequeño."
           />
           <MetricBox
             label="Energía química H₂"
             value={data.energyMJ.toFixed(4)}
             unit="MJ"
             color="#fbbf24"
+            tip="Es la energía total almacenada en el hidrógeno como enlace químico. El H₂ tiene 119.96 MJ/kg — el poder calorífico más alto de cualquier combustible conocido, casi 3 veces más que la gasolina."
           />
           <MetricBox
             label="Equivalente eléctrico"
             value={data.energyKWh.toFixed(5)}
             unit="kWh"
             color="#4ade80"
+            tip="Es la misma energía química pero expresada en kilovatios-hora, que es la unidad que usa la factura de luz. Sirve para comparar directamente cuánto costaría esa energía si viniera de la red eléctrica."
           />
         </div>
 
@@ -262,9 +377,13 @@ export default function StoragePanel({
               fontSize: 11,
               color: "#9ca3af",
               marginBottom: 8,
+              alignItems: "center",
             }}
           >
-            <span>Nivel del tanque (cap. 2L)</span>
+            <span style={{ display: "flex", alignItems: "center" }}>
+              Nivel del tanque (cap. 2L)
+              <Tip text="La capacidad de 2 litros es la escala del simulador de laboratorio. Un tanque real de un carro de hidrógeno tiene 5.6 kg a 700 bar. Con producción casera se llena despacio — los sistemas industriales lo hacen en minutos." />
+            </span>
             <span
               style={{
                 color: fillColor,
@@ -311,9 +430,12 @@ export default function StoragePanel({
               fontWeight: 700,
               color: "#22d3ee",
               marginBottom: 8,
+              display: "flex",
+              alignItems: "center",
             }}
           >
             💧 Fuente activa: {source.label}
+            <Tip text="La fuente de agua afecta la conductividad eléctrica de la solución. A mayor conductividad, más corriente puede fluir y más H₂ se produce. El electrolito (NaOH, KOH) que se agrega también mejora este valor." />
           </div>
           <div
             style={{
@@ -395,7 +517,7 @@ function SectionTitle({ children }) {
   );
 }
 
-function MetricBox({ label, value, unit, color }) {
+function MetricBox({ label, value, unit, color, tip }) {
   return (
     <div
       style={{
@@ -419,8 +541,18 @@ function MetricBox({ label, value, unit, color }) {
           {unit}
         </span>
       </div>
-      <div style={{ fontSize: 10, color: "#4b5563", marginTop: 4 }}>
+      <div
+        style={{
+          fontSize: 10,
+          color: "#4b5563",
+          marginTop: 4,
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
+        }}
+      >
         {label}
+        {tip && <Tip text={tip} />}
       </div>
     </div>
   );

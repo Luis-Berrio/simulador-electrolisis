@@ -1,6 +1,7 @@
-import { calcular } from "../physics/faraday";
-import EnergySelector from "./EnergySelector";
 import { SYSTEM_QUALITY } from "../physics/faraday";
+import EnergySelector from "./EnergySelector";
+import InfoTooltip from "./InfoTooltip";
+import Glossary from "./Glossary";
 
 export default function ControlPanel({ params, setParams, results }) {
   const update = (key, val) => setParams((p) => ({ ...p, [key]: val }));
@@ -29,13 +30,14 @@ export default function ControlPanel({ params, setParams, results }) {
         flexDirection: "column",
         height: "100%",
         overflowY: "auto",
+        overflowX: "hidden",
         fontFamily: "var(--font-main)",
       }}
     >
       {/* ── Métricas ── */}
       <Section title="Magnitudes en tiempo real">
         <div
-          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}
+          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}
         >
           <MCard label="Voltaje" value={params.voltage.toFixed(1)} unit="V" />
           <MCard
@@ -94,6 +96,7 @@ export default function ControlPanel({ params, setParams, results }) {
         </div>
       </Section>
 
+      {/* ── Fuente de energía ── */}
       <EnergySelector
         selectedSource={params.energySource}
         onChange={(id) => update("energySource", id)}
@@ -105,38 +108,45 @@ export default function ControlPanel({ params, setParams, results }) {
       <Section title="Control de variables">
         <Slider
           label="Voltaje"
-          value={params.voltage}
           unit="V"
           min={1}
           max={30}
           step={0.5}
           cls=""
+          value={params.voltage}
           onChange={(v) => update("voltage", v)}
+          tooltip="La fuerza que empuja la corriente por el agua. A más voltaje, más H₂ se produce por segundo."
         />
         <Slider
           label="Resistencia"
-          value={params.resistance}
           unit="Ω"
           min={0.5}
           max={50}
           step={0.5}
           cls="red"
+          value={params.resistance}
           onChange={(v) => update("resistance", v)}
+          tooltip="Dificultad del circuito. Menos resistencia = más corriente = más H₂ producido."
         />
         <Slider
           label="Tiempo"
-          value={params.time}
           unit="s"
           min={1}
           max={7200}
           step={1}
           cls="green"
+          value={params.time}
           onChange={(v) => update("time", v)}
+          tooltip="Duración del experimento. A más tiempo, más H₂ se acumula en el tanque."
         />
       </Section>
 
       {/* ── Electrolito ── */}
       <Section title="Electrolito">
+        <LabelWithTip
+          label="Sustancia en el agua"
+          tip="Mejora la conductividad eléctrica del agua. Sin electrolito, el agua pura casi no conduce corriente."
+        />
         <select
           style={sel}
           onChange={(e) => {
@@ -153,11 +163,18 @@ export default function ControlPanel({ params, setParams, results }) {
       </Section>
 
       {/* ── Calidad del sistema ── */}
-      <Section title="Calidad del sistema electrolizador">
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <Section title="Calidad del sistema">
+        <LabelWithTip
+          label="Nivel del electrolizador"
+          tip="Representa la tecnología del equipo. Un sistema avanzado PEM produce 3.5× más H₂ con la misma energía que uno básico."
+        />
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
           {Object.values(SYSTEM_QUALITY).map((sq) => {
             const active = params.systemQuality === sq.id;
-            const effPercent = Math.round(sq.efficiencyMultiplier * 24);
+            const effPercent = Math.min(
+              85,
+              Math.round(sq.efficiencyMultiplier * 24),
+            );
             return (
               <button
                 key={sq.id}
@@ -168,7 +185,7 @@ export default function ControlPanel({ params, setParams, results }) {
                     : "var(--surface)",
                   border: `1px solid ${active ? "#4ade80" : "var(--border2)"}`,
                   borderRadius: 7,
-                  padding: "8px 10px",
+                  padding: "7px 10px",
                   cursor: "pointer",
                   textAlign: "left",
                   display: "flex",
@@ -191,7 +208,7 @@ export default function ControlPanel({ params, setParams, results }) {
                     style={{
                       fontSize: 10,
                       color: "var(--muted)",
-                      marginTop: 2,
+                      marginTop: 1,
                     }}
                   >
                     {sq.description}
@@ -199,13 +216,13 @@ export default function ControlPanel({ params, setParams, results }) {
                 </div>
                 <div
                   style={{
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: 700,
                     color: active ? "#4ade80" : "var(--muted2)",
                     fontFamily: "var(--font-mono)",
                   }}
                 >
-                  ≈{Math.min(85, effPercent)}%
+                  ≈{effPercent}%
                 </div>
               </button>
             );
@@ -215,15 +232,24 @@ export default function ControlPanel({ params, setParams, results }) {
 
       {/* ── Electrodos ── */}
       <Section title="Material de electrodos">
+        <LabelWithTip
+          label="Conductor en el agua"
+          tip="El electrodo negativo produce H₂ y el positivo O₂. El platino es el más eficiente pero costoso. El níquel es el estándar industrial."
+        />
         <div
-          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 5,
+            marginBottom: 8,
+          }}
         >
           {electrodes.map((e) => (
             <button
               key={e}
               onClick={() => update("electrode", e)}
               style={{
-                padding: "7px 0",
+                padding: "6px 0",
                 borderRadius: 7,
                 cursor: "pointer",
                 fontSize: 11,
@@ -245,14 +271,12 @@ export default function ControlPanel({ params, setParams, results }) {
             </button>
           ))}
         </div>
-        {/* Eficiencia del electrodo seleccionado */}
         <div
           style={{
-            marginTop: 8,
             background: "var(--surface)",
             border: "1px solid var(--border)",
             borderRadius: 7,
-            padding: "8px 11px",
+            padding: "7px 10px",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
@@ -263,7 +287,7 @@ export default function ControlPanel({ params, setParams, results }) {
           </span>
           <span
             style={{
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: 700,
               fontFamily: "var(--font-mono)",
               color:
@@ -277,15 +301,13 @@ export default function ControlPanel({ params, setParams, results }) {
             {results.electrodeEff}%
           </span>
         </div>
-
-        {/* Barra visual de eficiencia */}
         <div
           style={{
-            height: 4,
+            height: 3,
             borderRadius: 2,
             background: "var(--surface2)",
             overflow: "hidden",
-            marginTop: 6,
+            marginTop: 5,
           }}
         >
           <div
@@ -299,77 +321,114 @@ export default function ControlPanel({ params, setParams, results }) {
                   : results.electrodeEff >= 75
                     ? "#fbbf24"
                     : "#ef4444",
-              transition: "width .4s ease, background .3s ease",
-              boxShadow: `0 0 6px ${results.electrodeEff >= 90 ? "#4ade80" : results.electrodeEff >= 75 ? "#fbbf24" : "#ef4444"}60`,
+              transition: "width .4s ease",
             }}
           />
         </div>
       </Section>
 
       {/* ── Fórmulas ── */}
-      <Section title="Leyes físicas aplicadas" last>
+      <Section title="Leyes físicas aplicadas">
         <div
           style={{
             background: "var(--surface)",
             border: "1px solid var(--border)",
             borderRadius: 8,
-            padding: "12px 13px",
+            padding: "10px 12px",
             fontFamily: "var(--font-mono)",
             fontSize: 11,
             color: "var(--muted)",
             lineHeight: 2,
           }}
         >
-          <div style={fLabel}>Ley de Ohm</div>
-          <div style={fVal}>
-            I = V / R →&nbsp;
-            <span style={{ color: "var(--cyan)" }}>
-              {params.voltage} / {params.resistance} ={" "}
-              {results.current.toFixed(3)} A
-            </span>
-          </div>
-
-          <div style={fLabel}>1ª Ley de Faraday</div>
-          <div style={fVal}>m = (M × I × t) / (n × F)</div>
-          <div style={{ color: "var(--cyan)", fontSize: 11 }}>
-            m(H₂) = {results.massH2.toFixed(6)} g
-          </div>
-          <div style={{ color: "var(--red)", fontSize: 11 }}>
-            m(O₂) = {results.massO2.toFixed(6)} g
-          </div>
-
-          <div style={fLabel}>Potencia disipada</div>
-          <div style={fVal}>
-            P = V × I →&nbsp;
-            <span style={{ color: "var(--cyan)" }}>
-              {results.power.toFixed(2)} W
-            </span>
-          </div>
-
-          <div style={fLabel}>Energía total</div>
-          <div style={fVal}>
-            E = P × t →&nbsp;
-            <span style={{ color: "var(--cyan)" }}>
-              {(results.energy / 1000).toFixed(4)} kJ
-            </span>
-          </div>
-
-          <div style={fLabel}>Constante de Faraday</div>
-          <div style={fVal}>
-            F = <span style={{ color: "var(--amber)" }}>96,485 C/mol</span>
-          </div>
+          <Row
+            label="Ley de Ohm"
+            formula={`I = V/R → ${results.current.toFixed(3)} A`}
+            color="var(--cyan)"
+          />
+          <Row
+            label="1ª Ley Faraday"
+            formula="m = (M × I × t) / (n × F)"
+            color="var(--muted2)"
+          />
+          <Row
+            label="m(H₂)"
+            formula={`${results.massH2.toFixed(6)} g`}
+            color="var(--cyan)"
+          />
+          <Row
+            label="m(O₂)"
+            formula={`${results.massO2.toFixed(6)} g`}
+            color="var(--red)"
+          />
+          <Row
+            label="Potencia"
+            formula={`P = V×I → ${results.power.toFixed(2)} W`}
+            color="var(--cyan)"
+          />
+          <Row
+            label="Energía"
+            formula={`E = P×t → ${(results.energy / 1000).toFixed(4)} kJ`}
+            color="var(--cyan)"
+          />
+          <Row
+            label="F (Faraday)"
+            formula="96,485 C/mol"
+            color="var(--amber)"
+          />
         </div>
       </Section>
+
+      {/* ── Glosario ── */}
+      {/* <Section title="Glosario de términos" last>
+        <Glossary />
+      </Section> */}
     </aside>
   );
 }
 
-/* ─ sub-componentes ─ */
+/* ── helpers ── */
+function LabelWithTip({ label, tip }) {
+  return (
+    <div
+      style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 7 }}
+    >
+      <span style={{ fontSize: 11, color: "var(--muted)" }}>{label}</span>
+      <InfoTooltip text={tip} />
+    </div>
+  );
+}
+
+function Row({ label, formula, color }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        gap: 8,
+        flexWrap: "wrap",
+      }}
+    >
+      <span
+        style={{
+          fontSize: 10,
+          color: "var(--border2)",
+          textTransform: "uppercase",
+          letterSpacing: ".06em",
+        }}
+      >
+        {label}
+      </span>
+      <span style={{ color, fontWeight: 600 }}>{formula}</span>
+    </div>
+  );
+}
+
 function Section({ title, children, last }) {
   return (
     <div
       style={{
-        padding: "14px 16px",
+        padding: "12px 14px",
         borderBottom: last ? "none" : "1px solid var(--border)",
         flex: last ? 1 : "none",
       }}
@@ -381,7 +440,7 @@ function Section({ title, children, last }) {
           letterSpacing: ".1em",
           textTransform: "uppercase",
           color: "var(--muted)",
-          marginBottom: 11,
+          marginBottom: 10,
           display: "flex",
           alignItems: "center",
           gap: 7,
@@ -409,12 +468,12 @@ function MCard({
         background: bg,
         border: `1px solid ${border}`,
         borderRadius: 8,
-        padding: "10px 11px",
+        padding: "8px 10px",
       }}
     >
       <div
         style={{
-          fontSize: 17,
+          fontSize: 16,
           fontWeight: 700,
           color,
           fontFamily: "var(--font-mono)",
@@ -424,7 +483,7 @@ function MCard({
         {value}
         <span
           style={{
-            fontSize: 10,
+            fontSize: 9,
             fontWeight: 400,
             color: "var(--muted)",
             marginLeft: 2,
@@ -433,28 +492,44 @@ function MCard({
           {unit}
         </span>
       </div>
-      <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 4 }}>
+      <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 3 }}>
         {label}
       </div>
     </div>
   );
 }
 
-function Slider({ label, value, unit, min, max, step, onChange, cls }) {
+function Slider({
+  label,
+  tooltip,
+  value,
+  unit,
+  min,
+  max,
+  step,
+  onChange,
+  cls,
+}) {
   return (
-    <div style={{ marginBottom: 14 }}>
+    <div style={{ marginBottom: 12 }}>
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
-          fontSize: 12,
-          color: "var(--muted2)",
-          marginBottom: 5,
+          alignItems: "center",
+          marginBottom: 4,
         }}
       >
-        <span>{label}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ fontSize: 12, color: "var(--muted2)" }}>{label}</span>
+          {tooltip && <InfoTooltip text={tooltip} />}
+        </div>
         <strong
-          style={{ color: "var(--text)", fontFamily: "var(--font-mono)" }}
+          style={{
+            fontSize: 12,
+            color: "var(--text)",
+            fontFamily: "var(--font-mono)",
+          }}
         >
           {value} {unit}
         </strong>
@@ -469,7 +544,7 @@ function Slider({ label, value, unit, min, max, step, onChange, cls }) {
         onChange={(e) => onChange(parseFloat(e.target.value))}
       />
       <div
-        style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}
+        style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 5 }}
       >
         <input
           type="number"
@@ -479,9 +554,9 @@ function Slider({ label, value, unit, min, max, step, onChange, cls }) {
           value={value}
           onChange={(e) => onChange(parseFloat(e.target.value) || min)}
           style={{
-            width: 75,
+            width: 70,
             fontSize: 12,
-            padding: "4px 8px",
+            padding: "3px 7px",
             background: "var(--surface)",
             border: "1px solid var(--border2)",
             borderRadius: 6,
@@ -499,7 +574,7 @@ function Slider({ label, value, unit, min, max, step, onChange, cls }) {
 const sel = {
   width: "100%",
   fontSize: 12,
-  padding: "7px 10px",
+  padding: "6px 9px",
   borderRadius: 7,
   background: "var(--surface2)",
   border: "1px solid var(--border2)",
@@ -508,10 +583,3 @@ const sel = {
   cursor: "pointer",
   fontFamily: "var(--font-main)",
 };
-const fLabel = {
-  fontSize: 10,
-  color: "var(--border2)",
-  textTransform: "uppercase",
-  letterSpacing: ".07em",
-};
-const fVal = { color: "var(--muted2)", fontWeight: 600 };
