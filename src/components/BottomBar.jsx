@@ -29,6 +29,8 @@ export default function BottomBar({
         backdropFilter: "blur(12px)",
         zIndex: 40,
         flexShrink: 0,
+        position: "relative",
+        overflow: "visible",
       }}
     >
       {/* Anterior */}

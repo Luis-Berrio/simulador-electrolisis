@@ -1,19 +1,29 @@
 import { useState, useRef } from "react";
 import { calcularPilaCombustible } from "../physics/hydrogen";
 
-// ── Tooltip inline ──────────────────────────────────────
 function Tip({ text }) {
-  const [v, setV] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [pinned, setPinned] = useState(false);
   const ref = useRef(null);
-  const [above, setAbove] = useState(false);
+  const [above, setAbove] = useState(true);
+  const visible = hovered || pinned;
 
-  const handleShow = () => {
+  const calcDir = () => {
     if (ref.current) {
       const rect = ref.current.getBoundingClientRect();
-      // Si hay menos de 160px arriba, muestra hacia abajo
       setAbove(rect.top > 160);
     }
-    setV(true);
+  };
+
+  const getStyle = () => {
+    if (!ref.current) return {};
+    const rect = ref.current.getBoundingClientRect();
+    const left = Math.min(Math.max(rect.left - 90, 8), window.innerWidth - 232);
+    return {
+      top: above ? rect.top - 10 + "px" : rect.bottom + 10 + "px",
+      left: left + "px",
+      transform: above ? "translateY(-100%)" : "none",
+    };
   };
 
   return (
@@ -27,16 +37,22 @@ function Tip({ text }) {
       }}
     >
       <button
-        onMouseEnter={handleShow}
-        onMouseLeave={() => setV(false)}
-        onClick={() => (v ? setV(false) : handleShow())}
+        onMouseEnter={() => {
+          calcDir();
+          setHovered(true);
+        }}
+        onMouseLeave={() => setHovered(false)}
+        onClick={() => {
+          calcDir();
+          setPinned((p) => !p);
+        }}
         style={{
           width: 15,
           height: 15,
           borderRadius: "50%",
-          background: "rgba(255,255,255,.08)",
-          border: "1px solid rgba(255,255,255,.15)",
-          color: "#9ca3af",
+          background: pinned ? "rgba(59,130,246,.25)" : "rgba(255,255,255,.08)",
+          border: `1px solid ${pinned ? "#3b82f6" : "rgba(255,255,255,.15)"}`,
+          color: pinned ? "#3b82f6" : "#9ca3af",
           fontSize: 9,
           fontWeight: 700,
           cursor: "pointer",
@@ -49,27 +65,49 @@ function Tip({ text }) {
           transition: "all .2s",
         }}
       >
-        ?
+        {pinned ? "×" : "?"}
       </button>
-      {v && (
+
+      {visible && (
         <div
           style={{
-            position: "absolute",
-            ...(above
-              ? { bottom: "130%", top: "auto" }
-              : { top: "130%", bottom: "auto" }),
-            left: "50%",
-            transform: "translateX(-50%)",
+            position: "fixed",
+            ...getStyle(),
             background: "#0d1117",
-            border: "1px solid rgba(59,130,246,.3)",
+            border: `1px solid ${pinned ? "#3b82f6" : "rgba(59,130,246,.3)"}`,
             borderRadius: 8,
             padding: "8px 10px",
             width: 220,
-            zIndex: 9999,
-            boxShadow: "0 8px 24px rgba(0,0,0,.6)",
-            pointerEvents: "none",
+            zIndex: 99999,
+            boxShadow: "0 8px 24px rgba(0,0,0,.7)",
+            pointerEvents: pinned ? "auto" : "none",
           }}
         >
+          {pinned && (
+            <div
+              style={{
+                fontSize: 9,
+                color: "#3b82f6",
+                fontWeight: 600,
+                marginBottom: 5,
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                fontFamily: "var(--font-main)",
+              }}
+            >
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: "#3b82f6",
+                  display: "inline-block",
+                }}
+              />
+              Fijado — toca × para cerrar
+            </div>
+          )}
           <div
             style={{
               fontSize: 11,
@@ -80,36 +118,12 @@ function Tip({ text }) {
           >
             {text}
           </div>
-          {/* Triángulo arriba o abajo según dirección */}
-          <div
-            style={{
-              position: "absolute",
-              ...(above
-                ? {
-                    top: "100%",
-                    borderTop: "5px solid rgba(59,130,246,.3)",
-                    borderBottom: "none",
-                  }
-                : {
-                    bottom: "100%",
-                    borderBottom: "5px solid rgba(59,130,246,.3)",
-                    borderTop: "none",
-                  }),
-              left: "50%",
-              transform: "translateX(-50%)",
-              width: 0,
-              height: 0,
-              borderLeft: "5px solid transparent",
-              borderRight: "5px solid transparent",
-            }}
-          />
         </div>
       )}
     </span>
   );
 }
 
-// ── Componentes visuales ────────────────────────────────
 function FlowBox({ color, label, sub, tip }) {
   return (
     <div
@@ -180,7 +194,6 @@ function SectionTitle({ children }) {
   );
 }
 
-// ── Panel principal ─────────────────────────────────────
 export default function FuelCellPanel({ massH2Grams }) {
   const massKg = massH2Grams / 1000;
   const data = calcularPilaCombustible(massKg);
@@ -219,7 +232,7 @@ export default function FuelCellPanel({ massH2Grams }) {
       icon: "🔋",
       value: `${data.stackVoltage.toFixed(1)} V DC`,
       color: "#818cf8",
-      tip: "El voltaje que entrega la pila en corriente continua (DC). Cada celda PEM genera ~0.7V. Varias celdas en serie forman el 'stack' y suman el voltaje total.",
+      tip: "El voltaje que entrega la pila en corriente continua (DC). Cada celda PEM genera ~0.7V. Varias celdas en serie forman el stack y suman el voltaje total.",
     },
     {
       label: "Corriente stack",
@@ -241,10 +254,9 @@ export default function FuelCellPanel({ massH2Grams }) {
         overflowY: "auto",
       }}
     >
-      {/* ── Diagrama de flujo ── */}
+      {/* ── Diagrama ── */}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <SectionTitle>Diagrama de la pila PEM</SectionTitle>
-
         <div
           style={{
             background: "var(--surface)",
@@ -269,7 +281,6 @@ export default function FuelCellPanel({ massH2Grams }) {
             />
             <FlowArrow />
 
-            {/* Membrana PEM */}
             <div
               style={{
                 width: "100%",
@@ -293,7 +304,7 @@ export default function FuelCellPanel({ massH2Grams }) {
                 }}
               >
                 ⚙️ Membrana PEM
-                <Tip text="La membrana PEM (Membrana de Intercambio Protónico) es una lámina delgada de polímero especial. Solo deja pasar los protones del hidrógeno (H⁺) y bloquea los electrones, que son forzados a viajar por el circuito externo generando corriente eléctrica." />
+                <Tip text="La membrana PEM es una lámina delgada de polímero especial. Solo deja pasar los protones del hidrógeno (H⁺) y bloquea los electrones, que son forzados a viajar por el circuito externo generando corriente eléctrica." />
               </div>
               <div style={{ fontSize: 10, color: "#6b7280", marginTop: 4 }}>
                 2H₂ → 4H⁺ + 4e⁻ &nbsp;|&nbsp; O₂ + 4H⁺ + 4e⁻ → 2H₂O
@@ -305,11 +316,25 @@ export default function FuelCellPanel({ massH2Grams }) {
                   marginTop: 10,
                 }}
               >
-                <div style={{ fontSize: 10, color: "#3b82f6" }}>
+                <div
+                  style={{
+                    fontSize: 10,
+                    color: "#3b82f6",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
                   ← Cátodo (H₂)
                   <Tip text="En el cátodo el H₂ se divide en protones (H⁺) y electrones (e⁻). Los protones cruzan la membrana y los electrones generan la corriente eléctrica." />
                 </div>
-                <div style={{ fontSize: 10, color: "#ef4444" }}>
+                <div
+                  style={{
+                    fontSize: 10,
+                    color: "#ef4444",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
                   Ánodo (O₂) →
                   <Tip text="En el ánodo el oxígeno del aire se combina con los protones que cruzaron la membrana y los electrones que vienen del circuito, produciendo agua pura como único residuo." />
                 </div>
@@ -325,7 +350,6 @@ export default function FuelCellPanel({ massH2Grams }) {
             />
             <FlowArrow />
 
-            {/* Inversor */}
             <div
               style={{
                 width: "100%",
@@ -363,7 +387,6 @@ export default function FuelCellPanel({ massH2Grams }) {
               tip="La electricidad ya está lista para usarse en cualquier aparato del hogar. A esta energía se le aplica la eficiencia del inversor (92%), por eso es un poco menos que la que salió directamente de la pila."
             />
 
-            {/* Subproducto */}
             <div
               style={{
                 marginTop: 10,
@@ -373,6 +396,10 @@ export default function FuelCellPanel({ massH2Grams }) {
                 borderRadius: 8,
                 padding: "8px 12px",
                 textAlign: "center",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 4,
               }}
             >
               <span style={{ fontSize: 10, color: "#22d3ee" }}>
@@ -428,7 +455,6 @@ export default function FuelCellPanel({ massH2Grams }) {
           ))}
         </div>
 
-        {/* Barra eficiencia */}
         <div
           style={{
             background: "var(--surface)",
@@ -477,7 +503,6 @@ export default function FuelCellPanel({ massH2Grams }) {
           </div>
         </div>
 
-        {/* Comparativa */}
         <div
           style={{
             background: "var(--surface)",

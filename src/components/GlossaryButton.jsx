@@ -11,9 +11,9 @@ export default function GlossaryButton() {
         onClick={() => setOpen((o) => !o)}
         style={{
           position: "fixed",
-          bottom: 62,
+          bottom: 82,
           left: 16,
-          zIndex: 60,
+          zIndex: 35,
           width: 42,
           height: 42,
           borderRadius: "50%",

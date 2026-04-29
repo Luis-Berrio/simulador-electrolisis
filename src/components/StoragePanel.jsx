@@ -1,19 +1,29 @@
 import { useState, useRef } from "react";
 import { calcularAlmacenamiento, WATER_SOURCES } from "../physics/hydrogen";
 
-// ── Tooltip inline ──────────────────────────
 function Tip({ text }) {
-  const [v, setV] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [pinned, setPinned] = useState(false);
   const ref = useRef(null);
-  const [above, setAbove] = useState(false);
+  const [above, setAbove] = useState(true);
+  const visible = hovered || pinned;
 
-  const handleShow = () => {
+  const calcDir = () => {
     if (ref.current) {
       const rect = ref.current.getBoundingClientRect();
-      // Si hay menos de 160px arriba, muestra hacia abajo
       setAbove(rect.top > 160);
     }
-    setV(true);
+  };
+
+  const getStyle = () => {
+    if (!ref.current) return {};
+    const rect = ref.current.getBoundingClientRect();
+    const left = Math.min(Math.max(rect.left - 90, 8), window.innerWidth - 232);
+    return {
+      top: above ? rect.top - 10 + "px" : rect.bottom + 10 + "px",
+      left: left + "px",
+      transform: above ? "translateY(-100%)" : "none",
+    };
   };
 
   return (
@@ -27,16 +37,22 @@ function Tip({ text }) {
       }}
     >
       <button
-        onMouseEnter={handleShow}
-        onMouseLeave={() => setV(false)}
-        onClick={() => (v ? setV(false) : handleShow())}
+        onMouseEnter={() => {
+          calcDir();
+          setHovered(true);
+        }}
+        onMouseLeave={() => setHovered(false)}
+        onClick={() => {
+          calcDir();
+          setPinned((p) => !p);
+        }}
         style={{
           width: 15,
           height: 15,
           borderRadius: "50%",
-          background: "rgba(255,255,255,.08)",
-          border: "1px solid rgba(255,255,255,.15)",
-          color: "#9ca3af",
+          background: pinned ? "rgba(59,130,246,.25)" : "rgba(255,255,255,.08)",
+          border: `1px solid ${pinned ? "#3b82f6" : "rgba(255,255,255,.15)"}`,
+          color: pinned ? "#3b82f6" : "#9ca3af",
           fontSize: 9,
           fontWeight: 700,
           cursor: "pointer",
@@ -49,27 +65,49 @@ function Tip({ text }) {
           transition: "all .2s",
         }}
       >
-        ?
+        {pinned ? "×" : "?"}
       </button>
-      {v && (
+
+      {visible && (
         <div
           style={{
-            position: "absolute",
-            ...(above
-              ? { bottom: "130%", top: "auto" }
-              : { top: "130%", bottom: "auto" }),
-            left: "50%",
-            transform: "translateX(-50%)",
+            position: "fixed",
+            ...getStyle(),
             background: "#0d1117",
-            border: "1px solid rgba(59,130,246,.3)",
+            border: `1px solid ${pinned ? "#3b82f6" : "rgba(59,130,246,.3)"}`,
             borderRadius: 8,
             padding: "8px 10px",
             width: 220,
-            zIndex: 9999,
-            boxShadow: "0 8px 24px rgba(0,0,0,.6)",
-            pointerEvents: "none",
+            zIndex: 99999,
+            boxShadow: "0 8px 24px rgba(0,0,0,.7)",
+            pointerEvents: pinned ? "auto" : "none",
           }}
         >
+          {pinned && (
+            <div
+              style={{
+                fontSize: 9,
+                color: "#3b82f6",
+                fontWeight: 600,
+                marginBottom: 5,
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                fontFamily: "var(--font-main)",
+              }}
+            >
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: "#3b82f6",
+                  display: "inline-block",
+                }}
+              />
+              Fijado — toca × para cerrar
+            </div>
+          )}
           <div
             style={{
               fontSize: 11,
@@ -80,29 +118,6 @@ function Tip({ text }) {
           >
             {text}
           </div>
-          {/* Triángulo arriba o abajo según dirección */}
-          <div
-            style={{
-              position: "absolute",
-              ...(above
-                ? {
-                    top: "100%",
-                    borderTop: "5px solid rgba(59,130,246,.3)",
-                    borderBottom: "none",
-                  }
-                : {
-                    bottom: "100%",
-                    borderBottom: "5px solid rgba(59,130,246,.3)",
-                    borderTop: "none",
-                  }),
-              left: "50%",
-              transform: "translateX(-50%)",
-              width: 0,
-              height: 0,
-              borderLeft: "5px solid transparent",
-              borderRight: "5px solid transparent",
-            }}
-          />
         </div>
       )}
     </span>
@@ -156,7 +171,6 @@ export default function StoragePanel({
             gap: 12,
           }}
         >
-          {/* Tanque animado */}
           <div style={{ position: "relative", width: 120, height: 200 }}>
             <div
               style={{
@@ -224,7 +238,6 @@ export default function StoragePanel({
                 </div>
               ))}
             </div>
-            {/* Válvula superior */}
             <div
               style={{
                 width: 20,
@@ -257,7 +270,6 @@ export default function StoragePanel({
           </div>
         </div>
 
-        {/* Fuente de agua */}
         <SectionTitle>
           Fuente de agua
           <Tip text="La calidad del agua afecta la eficiencia de la electrólisis. El agua lluvia filtrada es gratuita y funciona bien. El agua destilada es la más pura pero tiene costo. A mayor pureza, menos contaminantes que puedan dañar los electrodos." />
@@ -361,7 +373,6 @@ export default function StoragePanel({
           />
         </div>
 
-        {/* Barra de llenado */}
         <div
           style={{
             background: "var(--surface)",
@@ -415,7 +426,6 @@ export default function StoragePanel({
           </div>
         </div>
 
-        {/* Info fuente activa */}
         <div
           style={{
             background: "rgba(34,211,238,.06)",
@@ -472,7 +482,6 @@ export default function StoragePanel({
           </div>
         </div>
 
-        {/* Nota técnica */}
         <div
           style={{
             background: "var(--surface)",
